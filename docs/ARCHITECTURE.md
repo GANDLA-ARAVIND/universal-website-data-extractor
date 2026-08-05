@@ -119,7 +119,8 @@ flowchart TD
     SelectStrategy -->|True| InitPlaywright[Initialize Dynamic Playwright Fetcher]
     SelectStrategy -->|False| InitHTTPX[Initialize Static HTTPX Fetcher]
     
-    InitPlaywright & InitHTTPX --> InitFrontier[Initialize BFS Queue & Visited Set]
+    InitPlaywright --> InitFrontier[Initialize BFS Queue & Visited Set]
+    InitHTTPX --> InitFrontier
     InitFrontier --> CheckQueue{Queue Empty OR Max Pages Reached?}
     
     CheckQueue -->|No| PopURL[Pop Next URL & Depth from Queue]
@@ -134,7 +135,8 @@ flowchart TD
     CheckDepth -->|No| Delay[Apply Polite Crawl Delay]
     DiscoverLinks --> Delay
     
-    CheckStatus -->|No| LogError[Log Failure Metric] --> Delay
+    CheckStatus -->|No| LogError[Log Failure Metric]
+    LogError --> Delay
     Delay --> CheckQueue
     
     CheckQueue -->|Yes| SaveStats[CrawlRepository: Save Final Statistics]

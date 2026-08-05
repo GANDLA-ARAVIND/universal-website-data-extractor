@@ -7,7 +7,7 @@ This document provides complete documentation for the relational database schema
 ## 1. Entity Relationship (ER) Diagram
 
 ```mermaid
-erdiagram
+erDiagram
     CRAWL_JOBS ||--o{ EXTRACTED_PAGES : contains
     CRAWL_JOBS ||--o| CRAWL_STATISTICS : has
     EXTRACTED_PAGES ||--o{ PAGE_LINKS : contains

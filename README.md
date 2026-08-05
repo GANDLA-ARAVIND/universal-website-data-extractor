@@ -413,7 +413,7 @@ Binary stream attachment with header `Content-Disposition: attachment; filename=
 ### Entity Relationship Diagram
 
 ```mermaid
-erdiagram
+erDiagram
     CRAWL_JOBS ||--o{ EXTRACTED_PAGES : contains
     CRAWL_JOBS ||--o| CRAWL_STATISTICS : has
     EXTRACTED_PAGES ||--o{ PAGE_LINKS : contains
