@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "universal-web-scraper"
+version = "0.1.0"
+description = "A production-grade, asynchronous web crawling and data extraction engine."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Software Engineer", email = "engineer@example.com" }
+]
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.28.0",
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.2.0",
+    "sqlalchemy[asyncio]>=2.0.28",
+    "asyncpg>=0.29.0",
+    "aiosqlite>=0.20.0",
+    "httpx>=0.27.0",
+    "beautifulsoup4>=4.12.3",
+    "lxml>=5.1.0",
+    "playwright>=1.42.0",
+    "python-multipart>=0.0.9",
+    "structlog>=24.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.1.0",
+    "pytest-asyncio>=0.23.5",
+    "mypy>=1.9.0",
+    "ruff>=0.3.0",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
