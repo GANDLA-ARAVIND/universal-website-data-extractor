@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Website Data Extractor</title>
+    <meta name="description" content="Production-grade asynchronous web crawler and structural data extraction engine.">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- STICKY NAVIGATION BAR -->
+        <nav class="sticky-nav">
+            <a href="#hero-section" class="nav-link active">Configuration</a>
+            <a href="#progress-card" class="nav-link">Progress</a>
+            <a href="#stats-section" class="nav-link">Statistics</a>
+            <a href="#results-section" class="nav-link">Results</a>
+            <a href="#export-section" class="nav-link">Export</a>
+        </nav>
+
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="logo-container">
+                <div class="logo-icon">🌐</div>
+                <div class="logo-text">
+                    <h1>Universal Website Data Extractor</h1>
+                    <p class="tagline">Crawl, Extract, and Export Website Data</p>
+                </div>
+            </div>
+            <div class="header-status">
+                <span class="status-indicator online"></span>
+                <span class="status-label">API Online</span>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT CONTAINER -->
+        <main class="main-content">
+            <!-- HERO CONFIGURATION CARD -->
+            <section id="hero-section" class="hero-section">
+                <div class="hero-header">
+                    <h2>Extract Structured Website Data in Seconds</h2>
+                    <p>Supports static HTML and dynamic JavaScript-powered Single Page Applications (SPAs).</p>
+                </div>
+
+                <form id="crawl-form" class="hero-card">
+                    <div class="form-group url-group">
+                        <label for="target-url">Website URL</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">🔗</span>
+                            <input 
+                                type="url" 
+                                id="target-url" 
+                                placeholder="https://news.ycombinator.com" 
+                                required 
+                                autocomplete="off"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="max-depth">Max Crawl Depth</label>
+                            <input type="number" id="max-depth" value="2" min="0" max="10" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="max-pages">Max Pages Limit</label>
+                            <input type="number" id="max-pages" value="20" min="1" max="500" required>
+                        </div>
+
+                        <div class="form-group toggle-group">
+                            <label for="render-js">Playwright JS Rendering</label>
+                            <div class="toggle-switch-wrapper">
+                                <input type="checkbox" id="render-js" class="toggle-input">
+                                <label for="render-js" class="toggle-slider"></label>
+                                <span class="toggle-label-text">Render JavaScript</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="start-btn" class="btn btn-primary btn-large">
+                        <span class="btn-icon">🚀</span>
+                        <span class="btn-text">Start Crawling</span>
+                    </button>
+
+                    <div class="feature-badges">
+                        <span class="badge">✓ Static HTML</span>
+                        <span class="badge">✓ Playwright JS</span>
+                        <span class="badge">✓ Headings & Text</span>
+                        <span class="badge">✓ Tables & Lists</span>
+                        <span class="badge">✓ Media Assets</span>
+                        <span class="badge">✓ Internal/External Links</span>
+                        <span class="badge">✓ Multi-format Exports</span>
+                    </div>
+                </form>
+            </section>
+
+            <!-- LIVE WEBSITE PREVIEW CARD -->
+            <section id="preview-card" class="card preview-card hidden">
+                <div class="preview-header">
+                    <img id="preview-favicon" class="preview-favicon" src="" alt="Favicon">
+                    <div class="preview-domain-info">
+                        <h3 id="preview-domain">example.com</h3>
+                        <span id="preview-title" class="preview-page-title">Not Available</span>
+                    </div>
+                    <div class="preview-badges">
+                        <span id="preview-max-pages" class="pill info">Max Pages: 20</span>
+                        <span id="preview-mode" class="pill info">Mode: Static HTML</span>
+                    </div>
+                </div>
+                <p id="preview-desc" class="preview-description">Not Available</p>
+            </section>
+
+            <!-- LIVE CRAWL PROGRESS CARD -->
+            <section id="progress-card" class="card progress-card hidden">
+                <div class="progress-card-header">
+                    <div id="status-pill" class="status-pill running">
+                        <span id="loader-icon" class="pulse-dot"></span>
+                        <span id="progress-status-text">FETCHING & EXTRACTING</span>
+                    </div>
+                    <div class="timer-display">
+                        ⏱️ Elapsed: <span id="elapsed-time">00:00</span>
+                    </div>
+                </div>
+
+                <div class="processing-grid">
+                    <div class="proc-item">
+                        <span class="proc-label">📄 Pages Processed</span>
+                        <span id="progress-pages-count" class="proc-val">0 / 0</span>
+                    </div>
+                    <div class="proc-item">
+                        <span class="proc-label">🌳 Current Depth</span>
+                        <span id="progress-depth" class="proc-val">Depth 0</span>
+                    </div>
+                    <div class="proc-item">
+                        <span class="proc-label">⚡ Latency</span>
+                        <span id="progress-latency" class="proc-val">-- ms</span>
+                    </div>
+                </div>
+
+                <div class="progress-current-url">
+                    <span class="url-label">🌐 Processing URL:</span>
+                    <span id="current-processing-url" class="url-val">https://...</span>
+                </div>
+
+                <div class="progress-bar-container">
+                    <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+                </div>
+
+                <!-- LIVE ACTIVITY CONSOLE -->
+                <div class="activity-console">
+                    <div class="console-header">
+                        <span>📟 Live Activity Console</span>
+                        <span class="console-dot green"></span>
+                    </div>
+                    <div id="activity-log" class="console-body">
+                        <div class="log-line info">[System Initialized] Awaiting crawl start...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COMPLETION SUMMARY CARD -->
+            <section id="completion-card" class="card summary-card hidden">
+                <div class="summary-header">
+                    <span class="summary-icon">🎉</span>
+                    <div>
+                        <h3>Crawl Completed Successfully</h3>
+                        <p id="summary-duration-text">Finished 0 pages in 0.0 seconds</p>
+                    </div>
+                </div>
+
+                <div class="summary-actions">
+                    <button id="view-results-btn" class="btn btn-secondary">
+                        👇 Scroll to Results
+                    </button>
+                    <button id="view-export-btn" class="btn btn-primary">
+                        📥 Go to Exports
+                    </button>
+                </div>
+            </section>
+
+            <!-- ERROR STATE CARD -->
+            <section id="error-card" class="card error-card hidden">
+                <div class="error-header">
+                    <span class="error-icon">⚠️</span>
+                    <div>
+                        <h3 id="error-title">Crawl Execution Error</h3>
+                        <p id="error-message">An unexpected error occurred during execution.</p>
+                    </div>
+                </div>
+                <button id="retry-btn" class="btn btn-danger">Retry Crawl</button>
+            </section>
+
+            <!-- EMPTY STATE CONTAINER -->
+            <section id="empty-state" class="empty-state">
+                <div class="empty-state-icon">🌍</div>
+                <h3>Start Exploring Any Public Website</h3>
+                <p>Enter a target website URL above to discover internal links, extract structured content, headings, tables, media, and export datasets.</p>
+            </section>
+
+            <!-- STATISTICS GRID (4 Cards) -->
+            <section id="stats-section" class="stats-grid hidden">
+                <div class="stat-card">
+                    <div class="stat-icon pages">📄</div>
+                    <div class="stat-info">
+                        <span id="stat-pages" class="stat-number">0</span>
+                        <span class="stat-label">Pages Crawled</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon images">🖼️</div>
+                    <div class="stat-info">
+                        <span id="stat-images" class="stat-number">0</span>
+                        <span class="stat-label">Images Extracted</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon links">🔗</div>
+                    <div class="stat-info">
+                        <span id="stat-links" class="stat-number">0</span>
+                        <span class="stat-label">Links Discovered</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon duration">⏱️</div>
+                    <div class="stat-info">
+                        <span id="stat-duration" class="stat-number">0.0s</span>
+                        <span class="stat-label">Total Duration</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- RESULTS LIST SECTION -->
+            <section id="results-section" class="results-section hidden">
+                <div class="results-header">
+                    <h3>Extracted Web Pages</h3>
+                </div>
+
+                <!-- SEARCH & FILTER BAR -->
+                <div class="search-filter-bar">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="search-input" placeholder="Search extracted pages by title, URL, or content...">
+                    </div>
+                    <div class="sort-box">
+                        <label for="sort-select">Sort by:</label>
+                        <select id="sort-select">
+                            <option value="url">URL</option>
+                            <option value="title">Title</option>
+                            <option value="response_time">Response Time</option>
+                            <option value="links">Number of Links</option>
+                            <option value="images">Number of Images</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="results-container" class="results-list">
+                    <!-- Extracted Page Cards rendered dynamically via app.js -->
+                </div>
+            </section>
+
+            <!-- SINGLE CONSOLIDATED EXPORT SECTION -->
+            <section id="export-section" class="card export-section hidden">
+                <div class="export-header">
+                    <h3>Export Extracted Dataset</h3>
+                    <p>Download your extracted pages and structured metadata in your preferred file format.</p>
+                </div>
+                <div class="export-buttons-grid">
+                    <button class="btn btn-outline export-btn" data-format="json">
+                        <span class="btn-icon">{}</span>
+                        <span>Export JSON</span>
+                    </button>
+                    <button class="btn btn-outline export-btn" data-format="csv">
+                        <span class="btn-icon">📊</span>
+                        <span>Export CSV</span>
+                    </button>
+                    <button class="btn btn-outline export-btn" data-format="markdown">
+                        <span class="btn-icon">📝</span>
+                        <span>Export Markdown</span>
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="app-footer">
+            <p>Built with 
+                <span class="tech-tag">FastAPI</span> • 
+                <span class="tech-tag">Playwright</span> • 
+                <span class="tech-tag">BeautifulSoup</span> • 
+                <span class="tech-tag">PostgreSQL</span> • 
+                <span class="tech-tag">HTML5</span> • 
+                <span class="tech-tag">CSS3</span> • 
+                <span class="tech-tag">Vanilla JS</span>
+            </p>
+            <div class="footer-github">
+                <a href="https://github.com" target="_blank" class="btn btn-small btn-outline">
+                    ⭐ View on GitHub
+                </a>
+            </div>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
