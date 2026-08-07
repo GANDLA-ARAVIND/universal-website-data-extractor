@@ -1,21 +1,22 @@
-"""Pydantic schemas for result export formats and requests."""
-
-import enum
+from enum import Enum
 from pydantic import BaseModel, Field
 
 
-class ExportFormatEnum(str, enum.Enum):
-    """Supported result export file formats."""
-
+class ExportFormat(str, Enum):
     JSON = "json"
     CSV = "csv"
     MARKDOWN = "markdown"
+    PDF = "pdf"
+    DOCX = "docx"
+    XLSX = "xlsx"
+
+
+# Backward compatibility alias
+ExportFormatEnum = ExportFormat
 
 
 class ExportRequest(BaseModel):
-    """Payload to request export generation for a crawl job."""
-
-    format: ExportFormatEnum = Field(
-        default=ExportFormatEnum.JSON,
-        description="Target export format (json, csv, markdown).",
+    format: ExportFormat = Field(
+        default=ExportFormat.JSON,
+        description="Desired export file format (json, csv, markdown, pdf, docx, xlsx)",
     )

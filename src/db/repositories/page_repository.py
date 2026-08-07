@@ -7,6 +7,7 @@ import uuid
 from typing import List, Optional, Tuple
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.crawler.extractors.html_extractor import ExtractedContentDTO
 from src.db.models.image import PageImage
@@ -83,6 +84,7 @@ class PageRepository:
         await self.session.refresh(page)
         return page
 
+
     async def get_pages_by_job_id(
         self,
         job_id: uuid.UUID,
@@ -106,6 +108,10 @@ class PageRepository:
 
         stmt = (
             select(ExtractedPage)
+            .options(
+                selectinload(ExtractedPage.links),
+                selectinload(ExtractedPage.images),
+            )
             .where(ExtractedPage.job_id == job_id)
             .order_by(ExtractedPage.created_at.asc())
             .offset(skip)
@@ -121,6 +127,10 @@ class PageRepository:
         """Retrieves all extracted pages for a job (used for file exports)."""
         stmt = (
             select(ExtractedPage)
+            .options(
+                selectinload(ExtractedPage.links),
+                selectinload(ExtractedPage.images),
+            )
             .where(ExtractedPage.job_id == job_id)
             .order_by(ExtractedPage.created_at.asc())
         )
