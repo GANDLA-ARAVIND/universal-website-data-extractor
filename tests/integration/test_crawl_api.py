@@ -95,9 +95,47 @@ async def test_get_crawl_results_and_export(
     assert stat_response.json()["job_id"] == str(job.id)
 
     # 3. Test POST /export JSON
-    export_response = await async_client.post(
+    export_json = await async_client.post(
         f"/api/v1/crawl/{job.id}/export", json={"format": "json"}
     )
-    assert export_response.status_code == 200
-    assert "application/json" in export_response.headers["content-type"]
-    assert "attachment; filename=" in export_response.headers["content-disposition"]
+    assert export_json.status_code == 200
+    assert "application/json" in export_json.headers["content-type"]
+    assert "attachment; filename=" in export_json.headers["content-disposition"]
+
+    # 4. Test POST /export CSV
+    export_csv = await async_client.post(
+        f"/api/v1/crawl/{job.id}/export", json={"format": "csv"}
+    )
+    assert export_csv.status_code == 200
+    assert "text/csv" in export_csv.headers["content-type"]
+
+    # 5. Test POST /export Markdown
+    export_md = await async_client.post(
+        f"/api/v1/crawl/{job.id}/export", json={"format": "markdown"}
+    )
+    assert export_md.status_code == 200
+    assert "text/markdown" in export_md.headers["content-type"]
+
+    # 6. Test POST /export PDF
+    export_pdf = await async_client.post(
+        f"/api/v1/crawl/{job.id}/export", json={"format": "pdf"}
+    )
+    assert export_pdf.status_code == 200
+    assert "application/pdf" in export_pdf.headers["content-type"]
+    assert export_pdf.content.startswith(b"%PDF")
+
+    # 7. Test POST /export DOCX
+    export_docx = await async_client.post(
+        f"/api/v1/crawl/{job.id}/export", json={"format": "docx"}
+    )
+    assert export_docx.status_code == 200
+    assert "application/vnd.openxmlformats-officedocument.wordprocessingml.document" in export_docx.headers["content-type"]
+    assert export_docx.content.startswith(b"PK\x03\x04")
+
+    # 8. Test POST /export XLSX
+    export_xlsx = await async_client.post(
+        f"/api/v1/crawl/{job.id}/export", json={"format": "xlsx"}
+    )
+    assert export_xlsx.status_code == 200
+    assert "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" in export_xlsx.headers["content-type"]
+    assert export_xlsx.content.startswith(b"PK\x03\x04")
