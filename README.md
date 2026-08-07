@@ -23,23 +23,21 @@ Built following **Clean Architecture** and **SOLID principles**, the system deco
 ### 1. Domain-Isolated Asynchronous Crawler
 - **HTTP/HTTPS Validation**: Enforces public web scheme checks preventing SSRF or unsupported protocols.
 - **Domain Scoping**: Traverses only links belonging to the seed URL's domain.
-- **Depth & Page Limits**: Enforces configurable `max_depth` (0-10) and `max_pages` (1-500).
-- **Deduplication**: Maintains in-memory set normalization preventing duplicate page fetches.
-- **Polite Traversal**: Applies configurable delays (`crawl_delay`) between consecutive HTTP requests.
+### 1. Multi-Website Batch Crawling Engine
+- **Single & Batch Crawling Modes**: Crawl individual websites or multi-website batches concurrently.
+- **CSV & Text File Import**: Parse and validate seed URLs from multi-line text input or uploaded CSV files.
+- **Bounded Concurrency Control**: Configurable `MAX_CONCURRENT_BATCH_JOBS` via `.env` (default: 3) utilizing `asyncio.Semaphore` to manage system load.
+- **Resilient Failure Isolation**: Failed websites are isolated without crashing the batch.
+- **Selective Batch Retry**: Re-trigger background crawling specifically for failed websites without re-crawling completed sites.
 
-### 2. Dual Fetcher Strategy (Strategy Pattern)
-- **Static HTTPX Fetcher**: High-performance asynchronous HTTP client handling redirects, headers, and response latencies.
-- **Dynamic Playwright Fetcher**: Headless Chromium browser rendering JavaScript-heavy SPAs (React, Vue, Angular).
+### 2. Autonomous Web Fetcher & Extractor
+- **Hybrid Fetch Engine**: Blazing fast async HTTP requests (`httpx`) paired with headless Chromium rendering (`playwright`) for JavaScript SPAs.
+- **Structured Content Extraction**: Extracts page titles, meta descriptions, heading hierarchy (`H1`–`H6`), paragraph text blocks, HTML data tables, unordered/ordered lists, hyperlinks, and image assets.
+- **Domain Scope Enforcement**: Enforces domain-level BFS boundaries to prevent accidental external link traversal.
 
-### 3. Structural HTML Feature Extraction
-- **Metadata**: Title, Meta Description.
-- **Content**: Headings (`H1`–`H6`), Paragraphs, Lists (`<ul>`, `<ol>`), Tables (`<table>`).
-- **Media Assets**: Image source URLs and `alt` text metadata.
-- **Hyperlinks**: Classifies links into internal (same-domain) and external targets.
-
-### 4. Relational Persistence & Exporters
+### 3. Relational Persistence & Exporters
 - **SQLAlchemy 2.0 Async ORM**: Non-blocking database I/O (`asyncpg` for PostgreSQL, `aiosqlite` for zero-config local dev).
-- **Multi-Format Exports**: Downloads extracted datasets on-demand in **JSON**, **CSV**, and **Markdown** (`.md`).
+- **Multi-Format Exports**: Downloads single or multi-website datasets on-demand in **JSON**, **CSV**, **Markdown** (`.md`), **PDF** (`.pdf`), **Microsoft Word** (`.docx`), and **Microsoft Excel** (`.xlsx`).
 
 ### 5. SaaS Single Page Interface (`/app`)
 - **Live Activity Console**: Auto-scrolling real-time log tracking crawl milestones.

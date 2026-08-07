@@ -22,39 +22,52 @@ This document outlines the phased development roadmap for the **Universal Websit
 - [x] **Async Relational Persistence**:
   - SQLAlchemy 2.0 Async ORM with cascading delete constraints.
   - Dual database engine support: PostgreSQL (`asyncpg`) & zero-config SQLite (`aiosqlite`).
-- [x] **Multi-Format Exports**: Downloadable dataset exports in **JSON**, **CSV**, and **Markdown** (`.md`).
+- [x] **Multi-Format Exports**: Downloadable dataset exports in **JSON**, **CSV**, **Markdown** (`.md`), **PDF** (`.pdf`), **Microsoft Word** (`.docx`), and **Microsoft Excel** (`.xlsx`).
 - [x] **SaaS Single Page Dashboard (`/app`)**:
   - Live activity console logging real-time crawl events.
   - Dynamic website favicon, title, and description preview card.
   - Dedicated progress card with live depth, latency, and animated progress bar.
   - Instant client-side searching and dynamic sorting.
   - Accordion result views for structured elements.
-  - Minimalist sticky navigation bar and single export action section.
+  - Minimalist sticky navigation bar and 6-format dataset export action section.
 
 ---
 
-## Phase 2 (Expanded Export Formats - Future Work)
+## Phase 2 ✅ (Human Readable Document Exporters)
 
-*Planned enhancements to expand human-readable and analytical data outputs.*
+*All document exporter strategies in Phase 2 are 100% implemented, tested, and verified in the codebase.*
 
-- [ ] **PDF Report Export**: Render styled PDF documents of extracted pages and image catalogs.
-- [ ] **Microsoft Word (`.docx`) Export**: Format datasets into Word documents with structured tables.
-- [ ] **Excel (`.xlsx`) Export**: Multi-tab workbook generation separating pages, links, and media assets.
+- [x] **PDF Report Export (`.pdf`)**: Professional report with cover page, site summary table, statistics, table of contents, page sections, and dynamic two-pass canvas footers (`Page X of Y`).
+- [x] **Microsoft Word Export (`.docx`)**: Native Word typography styles (`Heading 1`, `Heading 2`, `Heading 3`), executive summary table, bullet lists, and structured tables.
+- [x] **Microsoft Excel Export (`.xlsx`)**: Multi-tab workbook (**Overview**, **Pages**, **Links**, **Images**, **Statistics**), bold styled headers, frozen top rows, auto-filters, and auto-column width sizing.
 
 ---
 
-## Phase 3 (Enterprise Scaling & Operations - Future Work)
+## Phase 3 ✅ (Multi-Website Batch Crawling Engine)
 
-*Architectural upgrades for multi-tenant, distributed production deployment.*
+*Multi-website batch crawling is 100% implemented, verified with tests, and documented.*
 
-- [ ] **Distributed Task Queue**: Replace FastAPI `BackgroundTasks` with **Celery** workers and **Redis** brokers for horizontal crawler scaling.
-- [ ] **Distributed Deduplication**: Store visited URL sets in **Redis Sets** across multi-node clusters.
+- [x] **Multi-Website Batch Engine (`POST /api/v1/batch`)**: Concurrently crawl multiple target websites within a single batch.
+- [x] **CSV & Multi-Line URL Import**: Input target URLs via multi-line text input or uploaded `.csv` files.
+- [x] **Bounded Concurrency Control**: Configurable `MAX_CONCURRENT_BATCH_JOBS` via `.env` utilizing `asyncio.Semaphore`.
+- [x] **Resilient Failure Isolation**: Child website failures do not crash the batch (`PARTIALLY_COMPLETED` status).
+- [x] **Selective Batch Retry**: Re-trigger background crawling **only** for child jobs with status `FAILED`.
+- [x] **Domain-Segmented Exports**: Multi-website exports across all 6 formats (**JSON**, **CSV**, **Markdown**, **PDF**, **DOCX**, **XLSX**).
+- [x] **Dashboard Mode Selector**: Dual-tab UI (**Single Website** | **Batch Websites**) with per-website progress table.
+
+---
+
+## Phase 4 (Distributed Workers & Cloud Operations - Future Work)
+
+*Planned enhancements for distributed enterprise deployment.*
+
+- [ ] **Redis / Celery Worker Queue**: Asynchronous distributed task queue for web crawler workers.
+- [ ] **S3 / Cloud Storage Artifact Sync**: Store exported datasets in AWS S3 / Google Cloud Storage.
+- [ ] **API Key Rate Limiting & Auth**: OAuth2 / API Key authorization middleware. visited URL sets in **Redis Sets** across multi-node clusters.
 - [ ] **JWT Authentication**: User account registration, API key management, and tenant data isolation.
 - [ ] **Crawl Scheduling**: Cron-based recurring crawl jobs.
 - [ ] **Containerization**: `Dockerfile` and `docker-compose.yml` defining FastAPI, Celery, Redis, and PostgreSQL containers.
 - [ ] **Automated CI/CD**: GitHub Actions workflow running Pytest test suites and code quality linters on pull requests.
-- [ ] **Robots.txt & Sitemap Integration**: Automatic parsing of target website `robots.txt` rules and `sitemap.xml` URL discovery.
-
 ---
 
 ## Phase 4 (AI Integration & Vector Pipeline - Future Work)

@@ -274,7 +274,7 @@ Generates and streams a downloadable file attachment containing all extracted pa
 
 ```json
 {
-  "format": "json | csv | markdown"
+  "format": "json | csv | markdown | pdf | docx | xlsx"
 }
 ```
 
@@ -284,8 +284,8 @@ Generates and streams a downloadable file attachment containing all extracted pa
 curl -X 'POST' \
   'http://localhost:8000/api/v1/crawl/9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d/export' \
   -H 'Content-Type: application/json' \
-  -d '{"format": "json"}' \
-  --output crawl_export.json
+  -d '{"format": "pdf"}' \
+  --output crawl_export.pdf
 ```
 
 ### Example Response Headers (200 OK)
@@ -295,6 +295,39 @@ HTTP/1.1 200 OK
 content-type: application/json
 content-disposition: attachment; filename="crawl_export_9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d.json"
 ```
+
+---
+
+## Batch Crawl API Endpoints
+
+### 6. `POST /api/v1/batch` — Initiate Multi-Website Batch Crawl
+
+Accepts a list of seed URLs to create a batch parent job and execute child crawls under concurrency constraints.
+
+```json
+{
+  "urls": ["https://site1.com", "https://site2.com"],
+  "max_depth": 2,
+  "max_pages": 50,
+  "render_js": false
+}
+```
+
+### 7. `GET /api/v1/batch/{batch_id}` — Get Batch Status
+
+Retrieves batch execution progress, child job summaries, and server-computed `progress_percentage`.
+
+### 8. `GET /api/v1/batch/{batch_id}/statistics` — Aggregated Batch Metrics
+
+Returns aggregated totals (`total_websites`, `completed_websites`, `failed_websites`, `total_pages`, `total_images`, `total_links`, `total_duration_sec`).
+
+### 9. `POST /api/v1/batch/{batch_id}/retry` — Retry Failed Websites
+
+Re-triggers background execution **only** for child jobs within the batch with status `FAILED`.
+
+### 10. `POST /api/v1/batch/{batch_id}/export` — Download Multi-Website Export
+
+Generates domain-segmented dataset export in requested format (`json`, `csv`, `markdown`, `pdf`, `docx`, `xlsx`).
 
 ---
 

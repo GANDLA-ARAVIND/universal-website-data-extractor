@@ -155,23 +155,18 @@ sequenceDiagram
     actor Client
     participant API as REST Controller
     participant ExportSvc as ExportService
+    participant Registry as ExporterRegistry
+    participant Strategy as Strategy Exporter (PDF / DOCX / XLSX / JSON / CSV / MD)
     participant PageRepo as PageRepository DAO
-    participant Formatter as Export Formatter
 
-    Client->>API: POST /api/v1/crawl/{job_id}/export {format: "json"}
+    Client->>API: POST /api/v1/crawl/{job_id}/export {format: "pdf"}
     API->>ExportSvc: generate_export(job_id, format)
     ExportSvc->>PageRepo: get_all_pages_for_job(job_id)
     PageRepo-->>ExportSvc: List[ExtractedPage]
-    
-    alt Format == JSON
-        ExportSvc->>Formatter: _export_json(pages)
-    else Format == CSV
-        ExportSvc->>Formatter: _export_csv(pages)
-    else Format == Markdown
-        ExportSvc->>Formatter: _export_markdown(pages)
-    end
-
-    Formatter-->>ExportSvc: (raw_bytes, filename, media_type)
+    ExportSvc->>Registry: get(format)
+    Registry-->>ExportSvc: PdfExporter Strategy Instance
+    ExportSvc->>Strategy: export(pages, job, stats)
+    Strategy-->>ExportSvc: (raw_bytes, filename, media_type)
     ExportSvc-->>API: Stream Payload
     API-->>Client: HTTP 200 OK (Content-Disposition: attachment)
 ```
