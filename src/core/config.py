@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     DEFAULT_CRAWL_DELAY_SEC: float = 0.5
     FETCH_TIMEOUT_SEC: float = 15.0
     PLAYWRIGHT_HEADLESS: bool = True
+    MAX_CONCURRENT_BATCH_JOBS: int = 3
 
     @computed_field  # type: ignore[prop-decorator]
     @property
