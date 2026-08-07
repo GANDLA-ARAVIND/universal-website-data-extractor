@@ -89,6 +89,75 @@ body {
 }
 
 /* --------------------------------------------------------------------------
+   MODE SELECTOR TABS & BATCH CONTROLS
+   -------------------------------------------------------------------------- */
+.mode-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.tab-btn {
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.tab-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.tab-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+    box-shadow: var(--shadow-sm);
+}
+
+.batch-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.csv-upload-btn {
+    cursor: pointer;
+    font-size: 12px;
+    padding: 4px 10px;
+}
+
+#batch-urls {
+    width: 100%;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    outline: none;
+    transition: var(--transition-fast);
+}
+
+#batch-urls:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-subtle);
+}
+
+.batch-table-wrapper {
+    margin-top: 16px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+/* --------------------------------------------------------------------------
    3. STICKY NAVIGATION BAR
    -------------------------------------------------------------------------- */
 .sticky-nav {

@@ -7,9 +7,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // API BASE CONFIGURATION
     const API_BASE = '/api/v1';
 
-    // DOM ELEMENTS
+    // DOM ELEMENTS - FORM & TABS
     const crawlForm = document.getElementById('crawl-form');
+    const modeTabs = document.querySelectorAll('.mode-tabs .tab-btn');
+    const singleUrlContainer = document.getElementById('single-url-container');
+    const batchUrlContainer = document.getElementById('batch-url-container');
     const targetUrlInput = document.getElementById('target-url');
+    const batchUrlsInput = document.getElementById('batch-urls');
+    const csvFileInput = document.getElementById('csv-file-input');
     const maxDepthInput = document.getElementById('max-depth');
     const maxPagesInput = document.getElementById('max-pages');
     const renderJsInput = document.getElementById('render-js');
@@ -19,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const emptyState = document.getElementById('empty-state');
     const previewCard = document.getElementById('preview-card');
     const progressCard = document.getElementById('progress-card');
+    const batchProgressCard = document.getElementById('batch-progress-card');
     const completionCard = document.getElementById('completion-card');
     const errorCard = document.getElementById('error-card');
     const statsSection = document.getElementById('stats-section');
@@ -49,6 +55,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressBarFill = document.getElementById('progress-bar-fill');
     const activityLog = document.getElementById('activity-log');
 
+    // BATCH PROGRESS BINDINGS
+    const batchStatusPill = document.getElementById('batch-status-pill');
+    const batchProgressStatusText = document.getElementById('batch-progress-status-text');
+    const batchTotalSites = document.getElementById('batch-total-sites');
+    const batchCompletedSites = document.getElementById('batch-completed-sites');
+    const batchRunningSites = document.getElementById('batch-running-sites');
+    const batchFailedSites = document.getElementById('batch-failed-sites');
+    const batchProgressBarFill = document.getElementById('batch-progress-bar-fill');
+    const batchJobsTableBody = document.getElementById('batch-jobs-table-body');
+    const retryFailedBtn = document.getElementById('retry-failed-btn');
+
     const summaryDurationText = document.getElementById('summary-duration-text');
     const errorMessage = document.getElementById('error-message');
     const retryBtn = document.getElementById('retry-btn');
@@ -62,7 +79,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const statDuration = document.getElementById('stat-duration');
 
     // APP STATE
+    let currentMode = 'single'; // 'single' | 'batch'
     let currentJobId = null;
+    let currentBatchId = null;
     let pollInterval = null;
     let timerInterval = null;
     let startTime = 0;
@@ -70,17 +89,74 @@ document.addEventListener('DOMContentLoaded', () => {
     let rawExtractedPages = [];
 
     // -------------------------------------------------------------------------
-    // 1. EVENT LISTENERS & NAVIGATION
+    // 1. EVENT LISTENERS & MODE TABS
     // -------------------------------------------------------------------------
+    modeTabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+            modeTabs.forEach((t) => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentMode = tab.getAttribute('data-mode');
+
+            if (currentMode === 'batch') {
+                hideElement(singleUrlContainer);
+                showElement(batchUrlContainer);
+                targetUrlInput.removeAttribute('required');
+                batchUrlsInput.setAttribute('required', 'true');
+            } else {
+                hideElement(batchUrlContainer);
+                showElement(singleUrlContainer);
+                batchUrlsInput.removeAttribute('required');
+                targetUrlInput.setAttribute('required', 'true');
+            }
+        });
+    });
+
+    if (csvFileInput) {
+        csvFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const text = event.target.result;
+                const lines = text
+                    .split(/\r?\n/)
+                    .map((l) => l.trim())
+                    .filter((l) => l.startsWith('http://') || l.startsWith('https://'));
+                if (lines.length > 0) {
+                    batchUrlsInput.value = lines.join('\n');
+                } else {
+                    alert('No valid HTTP/HTTPS URLs found in uploaded CSV file.');
+                }
+            };
+            reader.readAsText(file);
+        });
+    }
+
     crawlForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        await startCrawlJob();
+        if (currentMode === 'single') {
+            await startCrawlJob();
+        } else {
+            await startBatchCrawlJob();
+        }
     });
 
     retryBtn.addEventListener('click', () => {
         hideElement(errorCard);
-        startCrawlJob();
+        if (currentMode === 'single') {
+            startCrawlJob();
+        } else {
+            startBatchCrawlJob();
+        }
     });
+
+    if (retryFailedBtn) {
+        retryFailedBtn.addEventListener('click', async () => {
+            if (currentBatchId) {
+                await retryFailedBatchWebsites(currentBatchId);
+            }
+        });
+    }
 
     viewResultsBtn.addEventListener('click', () => {
         resultsSection.scrollIntoView({ behavior: 'smooth' });
@@ -92,11 +168,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Single Consolidated Export Buttons Listener
+    // Consolidated Export Buttons Listener (Single vs Batch)
     document.querySelectorAll('#export-section .export-btn').forEach((btn) => {
-        btn.addEventListener('click', async (e) => {
+        btn.addEventListener('click', async () => {
             const format = btn.getAttribute('data-format');
-            if (currentJobId && format) {
+            if (currentBatchId && format) {
+                await downloadBatchExport(currentBatchId, format);
+            } else if (currentJobId && format) {
                 await downloadExport(currentJobId, format);
             }
         });
@@ -110,28 +188,8 @@ document.addEventListener('DOMContentLoaded', () => {
         sortSelect.addEventListener('change', filterAndRenderResults);
     }
 
-    // Sticky Nav Link Active State Tracking
-    const navLinks = document.querySelectorAll('.nav-link');
-    window.addEventListener('scroll', () => {
-        let currentSection = '';
-        const sections = document.querySelectorAll('section[id]');
-        sections.forEach(sec => {
-            const secTop = sec.offsetTop - 100;
-            if (window.scrollY >= secTop) {
-                currentSection = sec.getAttribute('id');
-            }
-        });
-
-        navLinks.forEach(link => {
-            link.classList.remove('active');
-            if (link.getAttribute('href') === `#${currentSection}`) {
-                link.classList.add('active');
-            }
-        });
-    });
-
     // -------------------------------------------------------------------------
-    // 2. MAIN CRAWL INITIATION & POLLING
+    // 2. SINGLE WEBSITE CRAWL INITIATION & POLLING
     // -------------------------------------------------------------------------
     async function startCrawlJob() {
         const seedUrl = targetUrlInput.value.trim();
@@ -140,13 +198,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const renderJs = renderJsInput.checked;
 
         maxPagesLimit = maxPages;
+        currentBatchId = null;
 
         resetUI();
         disableForm(true);
 
         showLivePreview(seedUrl, maxPages, renderJs);
         showElement(progressCard);
-        logConsole(`Initializing crawl job for ${seedUrl}...`, 'info');
+        logConsole(`Initializing single crawl job for ${seedUrl}...`, 'info');
 
         try {
             const response = await fetch(`${API_BASE}/crawl`, {
@@ -168,11 +227,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             currentJobId = data.id;
             logConsole(`✓ Job created successfully [ID: ${currentJobId.slice(0, 8)}]`, 'success');
-            logConsole(`✓ Crawl Strategy: ${renderJs ? 'Playwright Headless Browser' : 'HTTPX Static Fetcher'}`, 'info');
 
             startTimer();
             startPolling(currentJobId);
-
         } catch (err) {
             logConsole(`❌ Error initiating crawl: ${err.message}`, 'error');
             showErrorState(err.message);
@@ -182,7 +239,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function startPolling(jobId) {
         clearInterval(pollInterval);
-
         pollInterval = setInterval(async () => {
             try {
                 const response = await fetch(`${API_BASE}/crawl/${jobId}`);
@@ -210,13 +266,152 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // -------------------------------------------------------------------------
-    // 3. SUCCESS HANDLER & DATA FETCHING
+    // 3. BATCH WEBSITE CRAWL INITIATION & POLLING
+    // -------------------------------------------------------------------------
+    async function startBatchCrawlJob() {
+        const rawUrlsText = batchUrlsInput.value.trim();
+        const urls = rawUrlsText
+            .split(/\r?\n/)
+            .map((u) => u.trim())
+            .filter((u) => u.length > 0);
+
+        if (urls.length === 0) {
+            alert('Please enter at least one valid website URL.');
+            return;
+        }
+
+        const maxDepth = parseInt(maxDepthInput.value, 10);
+        const maxPages = parseInt(maxPagesInput.value, 10);
+        const renderJs = renderJsInput.checked;
+
+        currentJobId = null;
+        resetUI();
+        disableForm(true);
+
+        showElement(batchProgressCard);
+        hideElement(retryFailedBtn);
+
+        try {
+            const response = await fetch(`${API_BASE}/batch`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    urls: urls,
+                    max_depth: maxDepth,
+                    max_pages: maxPages,
+                    render_js: renderJs,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Failed to initiate batch crawl job.');
+            }
+
+            const data = await response.json();
+            currentBatchId = data.id;
+            updateBatchUI(data);
+
+            startBatchPolling(currentBatchId);
+        } catch (err) {
+            showErrorState(err.message);
+            disableForm(false);
+        }
+    }
+
+    function startBatchPolling(batchId) {
+        clearInterval(pollInterval);
+        pollInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`${API_BASE}/batch/${batchId}`);
+                if (!response.ok) return;
+
+                const batch = await response.json();
+                updateBatchUI(batch);
+
+                if (['COMPLETED', 'PARTIALLY_COMPLETED', 'FAILED'].includes(batch.status)) {
+                    stopPolling();
+                    await handleBatchSuccess(batchId);
+                }
+            } catch (err) {
+                console.error('Batch polling error:', err);
+            }
+        }, 1500);
+    }
+
+    function updateBatchUI(batch) {
+        batchTotalSites.textContent = batch.total_urls;
+        batchCompletedSites.textContent = batch.completed_urls;
+        batchRunningSites.textContent = batch.running_urls;
+        batchFailedSites.textContent = batch.failed_urls;
+
+        batchProgressBarFill.style.width = `${batch.progress_percentage}%`;
+        batchProgressStatusText.textContent = `BATCH ${batch.status}`;
+
+        if (batch.failed_urls > 0) {
+            showElement(retryFailedBtn);
+        }
+
+        // Render Child Jobs Table
+        batchJobsTableBody.innerHTML = '';
+        batch.jobs.forEach((j) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><a href="${j.seed_url}" target="_blank" class="code-font">${j.seed_url}</a></td>
+                <td><span class="pill ${j.status === 'COMPLETED' ? 'success' : j.status === 'FAILED' ? 'error' : 'info'}">${j.status}</span></td>
+                <td>${j.max_pages}</td>
+                <td>--</td>
+                <td>--</td>
+                <td>--</td>
+            `;
+            batchJobsTableBody.appendChild(tr);
+        });
+    }
+
+    async function retryFailedBatchWebsites(batchId) {
+        hideElement(retryFailedBtn);
+        try {
+            const response = await fetch(`${API_BASE}/batch/${batchId}/retry`, {
+                method: 'POST',
+            });
+            if (response.ok) {
+                const batch = await response.json();
+                updateBatchUI(batch);
+                startBatchPolling(batchId);
+            }
+        } catch (err) {
+            console.error('Retry failed batch error:', err);
+        }
+    }
+
+    async function handleBatchSuccess(batchId) {
+        try {
+            const resStats = await fetch(`${API_BASE}/batch/${batchId}/statistics`);
+            if (resStats.ok) {
+                const bStats = await resStats.json();
+                statPages.textContent = bStats.total_pages;
+                statImages.textContent = bStats.total_images;
+                statLinks.textContent = bStats.total_links;
+                statDuration.textContent = `${bStats.total_duration_sec}s`;
+                summaryDurationText.textContent = `Batch processed ${bStats.total_websites} websites (${bStats.total_pages} pages) in ${bStats.total_duration_sec}s.`;
+            }
+        } catch (err) {
+            console.error('Fetch batch stats error:', err);
+        }
+
+        showElement(completionCard);
+        showElement(statsSection);
+        showElement(exportSection);
+        disableForm(false);
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. SUCCESS HANDLER & DATA FETCHING (SINGLE CRAWL)
     // -------------------------------------------------------------------------
     async function handleCrawlSuccess(jobId) {
         logConsole('✓ Crawl completed successfully!', 'success');
         updateProgressUI('COMPLETED', { max_pages: maxPagesLimit });
 
-        // 1. Fetch Statistics
         const stats = await fetchStatistics(jobId);
         if (stats) {
             statPages.textContent = stats.pages_crawled;
@@ -226,7 +421,6 @@ document.addEventListener('DOMContentLoaded', () => {
             summaryDurationText.textContent = `Processed ${stats.pages_crawled} pages in ${stats.total_duration_sec} seconds.`;
         }
 
-        // 2. Fetch Extracted Pages Results
         const resultsData = await fetchResults(jobId);
         if (resultsData && resultsData.data) {
             rawExtractedPages = resultsData.data;
@@ -262,256 +456,181 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // -------------------------------------------------------------------------
-    // 4. EXPORT DOWNLOAD HANDLER
+    // 5. EXPORT DOWNLOAD HELPERS
     // -------------------------------------------------------------------------
     async function downloadExport(jobId, format) {
-        logConsole(`Generating ${format.toUpperCase()} export file...`, 'info');
         try {
             const response = await fetch(`${API_BASE}/crawl/${jobId}/export`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ format }),
+                body: JSON.stringify({ format: format }),
             });
 
-            if (!response.ok) throw new Error('Export generation failed.');
+            if (!response.ok) throw new Error('Export download failed.');
 
             const blob = await response.blob();
-            const downloadUrl = window.URL.createObjectURL(blob);
+            const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = downloadUrl;
-            a.download = `crawl_export_${jobId}.${format === 'markdown' ? 'md' : format}`;
+            a.href = url;
+            a.download = `crawl_export_${jobId.slice(0, 8)}.${format === 'markdown' ? 'md' : format}`;
             document.body.appendChild(a);
             a.click();
             a.remove();
-            window.URL.revokeObjectURL(downloadUrl);
-
-            logConsole(`✓ Downloaded export: crawl_export_${jobId}.${format}`, 'success');
+            window.URL.revokeObjectURL(url);
         } catch (err) {
-            logConsole(`❌ Export failed: ${err.message}`, 'error');
+            alert(`Failed to download ${format.toUpperCase()} export: ${err.message}`);
+        }
+    }
+
+    async function downloadBatchExport(batchId, format) {
+        try {
+            const response = await fetch(`${API_BASE}/batch/${batchId}/export`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ format: format }),
+            });
+
+            if (!response.ok) throw new Error('Batch export download failed.');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `batch_export_${batchId.slice(0, 8)}.${format === 'markdown' ? 'md' : format}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            alert(`Failed to download batch ${format.toUpperCase()} export: ${err.message}`);
         }
     }
 
     // -------------------------------------------------------------------------
-    // 5. SEARCH, SORT & DOM RENDERERS
+    // 6. UI RENDERERS & HELPERS
     // -------------------------------------------------------------------------
-    function filterAndRenderResults() {
-        const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
-        const sortBy = sortSelect ? sortSelect.value : 'url';
+    function showLivePreview(urlStr, maxPages, renderJs) {
+        try {
+            const urlObj = new URL(urlStr);
+            previewFavicon.src = `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=64`;
+            previewDomain.textContent = urlObj.hostname;
+        } catch {
+            previewDomain.textContent = urlStr;
+        }
+        previewTitle.textContent = 'Initiating web fetch...';
+        previewDesc.textContent = 'Extracting metadata, headings, paragraphs, and media assets...';
+        previewMaxPages.textContent = `Max Pages: ${maxPages}`;
+        previewMode.textContent = `Mode: ${renderJs ? 'Playwright JS' : 'Static HTML'}`;
+        showElement(previewCard);
+    }
 
-        let filtered = rawExtractedPages.filter(p => {
-            if (!query) return true;
+    function updateFaviconPreview(firstPage) {
+        if (firstPage.title) previewTitle.textContent = firstPage.title;
+        if (firstPage.meta_description) previewDesc.textContent = firstPage.meta_description;
+    }
+
+    function updateProgressUI(status, job) {
+        progressStatusText.textContent = status;
+        if (job.pages_crawled !== undefined) {
+            progressPagesCount.textContent = `${job.pages_crawled} / ${job.max_pages || maxPagesLimit}`;
+            const pct = Math.min(100, Math.round((job.pages_crawled / (job.max_pages || maxPagesLimit)) * 100));
+            progressBarFill.style.width = `${pct}%`;
+        }
+    }
+
+    function filterAndRenderResults() {
+        if (!resultsContainer) return;
+        const query = (searchInput?.value || '').toLowerCase().trim();
+        const sortBy = sortSelect?.value || 'default';
+
+        let filtered = rawExtractedPages.filter((p) => {
             const titleMatch = (p.title || '').toLowerCase().includes(query);
             const urlMatch = (p.url || '').toLowerCase().includes(query);
             const descMatch = (p.meta_description || '').toLowerCase().includes(query);
             return titleMatch || urlMatch || descMatch;
         });
 
-        // Dynamic Sorting
-        filtered.sort((a, b) => {
-            if (sortBy === 'url') return (a.url || '').localeCompare(b.url || '');
-            if (sortBy === 'title') return (a.title || '').localeCompare(b.title || '');
-            if (sortBy === 'response_time') return (b.response_time_ms || 0) - (a.response_time_ms || 0);
-            if (sortBy === 'links') return (b.links_count || 0) - (a.links_count || 0);
-            if (sortBy === 'images') return (b.images_count || 0) - (a.images_count || 0);
-            return 0;
-        });
+        if (sortBy === 'title') {
+            filtered.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+        } else if (sortBy === 'status') {
+            filtered.sort((a, b) => a.status_code - b.status_code);
+        } else if (sortBy === 'latency') {
+            filtered.sort((a, b) => a.response_time_ms - b.response_time_ms);
+        }
 
-        renderResults(filtered);
-    }
-
-    function renderResults(pages) {
         resultsContainer.innerHTML = '';
-
-        if (pages.length === 0) {
-            resultsContainer.innerHTML = '<div class="empty-state"><p class="text-muted">No pages match your search query.</p></div>';
+        if (filtered.length === 0) {
+            resultsContainer.innerHTML = '<div class="empty-results">No pages match your search query.</div>';
             return;
         }
 
-        pages.forEach((p) => {
-            const card = document.createElement('div');
-            card.className = 'result-card';
-
-            const headingsCount = Object.values(p.headings || {}).flat().length;
-            let pageDomain = '';
-            try { pageDomain = new URL(p.url).hostname; } catch {}
-
-            const faviconUrl = pageDomain ? `https://www.google.com/s2/favicons?domain=${pageDomain}&sz=32` : '';
-
-            card.innerHTML = `
-                <div class="result-card-header">
-                    <div>
-                        <div class="result-title-row">
-                            ${faviconUrl ? `<img src="${faviconUrl}" class="result-favicon" alt="Icon">` : ''}
-                            <a href="${escapeHtml(p.url)}" target="_blank" class="result-url">${escapeHtml(p.url)}</a>
-                        </div>
-                        <h4 class="result-title">${escapeHtml(p.title || 'Untitled Page')}</h4>
-                    </div>
-                    <div class="result-pills">
-                        <span class="pill ${p.status_code >= 200 && p.status_code < 300 ? 'status-200' : 'status-error'}">${p.status_code} OK</span>
-                        <span class="pill info">Depth: ${p.depth}</span>
-                        <span class="pill info">${p.response_time_ms}ms</span>
-                    </div>
+        filtered.forEach((p, idx) => {
+            const item = document.createElement('div');
+            item.className = 'result-item';
+            item.innerHTML = `
+                <div class="result-item-header">
+                    <span class="result-index">#${idx + 1}</span>
+                    <a href="${p.url}" target="_blank" class="result-title">${p.title || 'Untitled Page'}</a>
+                    <span class="pill ${p.status_code === 200 ? 'success' : 'info'}">${p.status_code} OK</span>
                 </div>
-                ${p.meta_description ? `<p class="result-meta-desc">${escapeHtml(p.meta_description)}</p>` : ''}
-
-                <!-- ACCORDIONS -->
-                ${renderAccordion('Headings', `${headingsCount} headings`, renderHeadingsContent(p.headings))}
-                ${renderAccordion('Paragraphs', `${(p.paragraphs || []).length} paragraphs`, renderListContent(p.paragraphs))}
-                ${renderAccordion('Lists', `${(p.lists || []).length} lists`, renderListsContent(p.lists))}
-                ${renderAccordion('Tables', `${(p.tables || []).length} tables`, renderTablesContent(p.tables))}
-                ${renderAccordion('Images', `${p.images_count} images`, renderImagesContent(p.images || []))}
+                <div class="result-url-bar">${p.url}</div>
+                ${p.meta_description ? `<p class="result-desc">${p.meta_description}</p>` : ''}
             `;
-
-            resultsContainer.appendChild(card);
+            resultsContainer.appendChild(item);
         });
     }
 
-    function renderAccordion(title, badgeText, contentHtml) {
-        if (!contentHtml || contentHtml.trim() === '') return '';
-        return `
-            <details>
-                <summary>${title} (${badgeText})</summary>
-                <div class="accordion-body">${contentHtml}</div>
-            </details>
-        `;
+    function resetUI() {
+        stopPolling();
+        stopTimer();
+        hideElement(emptyState);
+        hideElement(previewCard);
+        hideElement(progressCard);
+        hideElement(batchProgressCard);
+        hideElement(completionCard);
+        hideElement(errorCard);
+        hideElement(statsSection);
+        hideElement(resultsSection);
+        hideElement(exportSection);
+
+        progressBarFill.style.width = '0%';
+        batchProgressBarFill.style.width = '0%';
+        elapsedTimeText.textContent = '00:00';
+        activityLog.innerHTML = '';
     }
 
-    function renderHeadingsContent(headings) {
-        if (!headings || Object.keys(headings).length === 0) return '';
-        let html = '<ul class="content-list">';
-        for (const [tag, list] of Object.entries(headings)) {
-            list.forEach(txt => {
-                html += `<li><strong>${tag.toUpperCase()}:</strong> ${escapeHtml(txt)}</li>`;
-            });
-        }
-        html += '</ul>';
-        return html;
+    function disableForm(disabled) {
+        startBtn.disabled = disabled;
+        targetUrlInput.disabled = disabled;
+        batchUrlsInput.disabled = disabled;
+        maxDepthInput.disabled = disabled;
+        maxPagesInput.disabled = disabled;
+        renderJsInput.disabled = disabled;
     }
 
-    function renderListContent(items) {
-        if (!items || items.length === 0) return '';
-        let html = '<ul class="content-list">';
-        items.forEach(txt => {
-            html += `<li>${escapeHtml(txt)}</li>`;
-        });
-        html += '</ul>';
-        return html;
+    function showErrorState(msg) {
+        hideElement(progressCard);
+        hideElement(batchProgressCard);
+        errorMessage.textContent = msg;
+        showElement(errorCard);
     }
 
-    function renderListsContent(lists) {
-        if (!lists || lists.length === 0) return '';
-        let html = '';
-        lists.forEach((sublist, idx) => {
-            html += `<p><strong>List #${idx + 1}</strong></p><ul class="content-list">`;
-            sublist.forEach(item => {
-                html += `<li>${escapeHtml(item)}</li>`;
-            });
-            html += '</ul><br>';
-        });
-        return html;
-    }
-
-    function renderTablesContent(tables) {
-        if (!tables || tables.length === 0) return '';
-        let html = '';
-        tables.forEach((tbl, idx) => {
-            html += `<p><strong>Table #${idx + 1}</strong></p><ul class="content-list">`;
-            tbl.forEach(row => {
-                html += `<li>${escapeHtml(row.join(' | '))}</li>`;
-            });
-            html += '</ul><br>';
-        });
-        return html;
-    }
-
-    function renderImagesContent(images) {
-        if (!images || images.length === 0) return '';
-        let html = '<div class="image-grid">';
-        images.forEach(img => {
-            html += `
-                <div class="image-item">
-                    <img src="${escapeHtml(img.image_url)}" alt="${escapeHtml(img.alt_text || '')}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'80\'><rect width=\'100%\' height=\'100%\' fill=\'%23e2e8f0\'/></svg>'">
-                    <div class="image-alt">${escapeHtml(img.alt_text || 'No Alt Text')}</div>
-                </div>
-            `;
-        });
-        html += '</div>';
-        return html;
-    }
-
-    // -------------------------------------------------------------------------
-    // 6. UTILITY FUNCTIONS & UI STATE RESET
-    // -------------------------------------------------------------------------
-    function showLivePreview(url, maxPages, renderJs) {
-        try {
-            const parsed = new URL(url);
-            previewFavicon.src = `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=64`;
-            previewDomain.textContent = parsed.hostname;
-            previewTitle.textContent = 'Not Available';
-            previewDesc.textContent = 'Not Available';
-            if (previewMaxPages) previewMaxPages.textContent = `Max Pages: ${maxPages}`;
-            if (previewMode) previewMode.textContent = `Mode: ${renderJs ? 'Playwright JS' : 'Static HTML'}`;
-            showElement(previewCard);
-        } catch {
-            hideElement(previewCard);
-        }
-    }
-
-    function updateFaviconPreview(firstPage) {
-        if (firstPage) {
-            previewTitle.textContent = firstPage.title && firstPage.title.trim() ? firstPage.title : 'Not Available';
-            previewDesc.textContent = firstPage.meta_description && firstPage.meta_description.trim() ? firstPage.meta_description : 'Not Available';
-        }
-    }
-
-    function updateProgressUI(status, job) {
-        if (status === 'RUNNING') {
-            const crawled = job.pages ? job.pages.length : 0;
-            progressPagesCount.textContent = `${crawled} / ${job.max_pages || maxPagesLimit}`;
-            currentProcessingUrl.textContent = job.seed_url || 'Processing pages...';
-
-            if (job.pages && job.pages.length > 0) {
-                const lastPage = job.pages[job.pages.length - 1];
-                if (progressDepth) progressDepth.textContent = `Depth ${lastPage.depth}`;
-                if (progressLatency) progressLatency.textContent = `${lastPage.response_time_ms} ms`;
-                if (lastPage.url) currentProcessingUrl.textContent = lastPage.url;
-            }
-
-            const pct = Math.min(100, Math.round((crawled / (job.max_pages || maxPagesLimit)) * 100));
-            progressBarFill.style.width = `${pct}%`;
-
-            if (crawled > 0) {
-                logConsole(`✓ Processed ${crawled} page(s)...`, 'info');
-            }
-        } else if (status === 'COMPLETED') {
-            progressBarFill.style.width = '100%';
-            progressPagesCount.textContent = `${job.max_pages || maxPagesLimit} / ${job.max_pages || maxPagesLimit}`;
-            if (statusPill) statusPill.className = 'status-pill completed';
-            if (loaderIcon) {
-                loaderIcon.className = 'success-icon';
-                loaderIcon.textContent = '✓';
-            }
-            if (progressStatusText) progressStatusText.textContent = 'COMPLETED';
-        }
-    }
-
-    function logConsole(message, type = 'info') {
-        const line = document.createElement('div');
-        line.className = `log-line ${type}`;
-        const time = new Date().toLocaleTimeString();
-        line.textContent = `[${time}] ${message}`;
-        activityLog.appendChild(line);
+    function logConsole(msg, type = 'info') {
+        const timeStr = new Date().toLocaleTimeString();
+        const div = document.createElement('div');
+        div.className = `log-line log-${type}`;
+        div.innerHTML = `<span class="log-time">[${timeStr}]</span> ${msg}`;
+        activityLog.appendChild(div);
         activityLog.scrollTop = activityLog.scrollHeight;
     }
 
     function startTimer() {
         startTime = Date.now();
-        clearInterval(timerInterval);
         timerInterval = setInterval(() => {
-            const seconds = Math.floor((Date.now() - startTime) / 1000);
-            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-            const secs = (seconds % 60).toString().padStart(2, '0');
-            elapsedTimeText.textContent = `${mins}:${secs}`;
+            const elapsedMs = Date.now() - startTime;
+            const sec = Math.floor(elapsedMs / 1000) % 60;
+            const min = Math.floor(elapsedMs / 60000);
+            elapsedTimeText.textContent = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
         }, 1000);
     }
 
@@ -523,62 +642,11 @@ document.addEventListener('DOMContentLoaded', () => {
         clearInterval(pollInterval);
     }
 
-    function resetUI() {
-        stopPolling();
-        stopTimer();
-        hideElement(emptyState);
-        hideElement(completionCard);
-        hideElement(errorCard);
-        hideElement(statsSection);
-        hideElement(resultsSection);
-        hideElement(exportSection);
-        progressBarFill.style.width = '0%';
-        elapsedTimeText.textContent = '00:00';
-        activityLog.innerHTML = '';
-        resultsContainer.innerHTML = '';
-        rawExtractedPages = [];
-        if (searchInput) searchInput.value = '';
-
-        if (statusPill) statusPill.className = 'status-pill running';
-        if (loaderIcon) {
-            loaderIcon.className = 'pulse-dot';
-            loaderIcon.textContent = '';
-        }
-        if (progressStatusText) progressStatusText.textContent = 'FETCHING & EXTRACTING';
-        if (progressDepth) progressDepth.textContent = 'Depth 0';
-        if (progressLatency) progressLatency.textContent = '-- ms';
+    function showElement(el) {
+        if (el) el.classList.remove('hidden');
     }
 
-    function showErrorState(msg) {
-        errorMessage.textContent = msg;
-        hideElement(progressCard);
-        showElement(errorCard);
-    }
-
-    function disableForm(disabled) {
-        startBtn.disabled = disabled;
-        targetUrlInput.disabled = disabled;
-        maxDepthInput.disabled = disabled;
-        maxPagesInput.disabled = disabled;
-        renderJsInput.disabled = disabled;
-
-        if (disabled) {
-            startBtn.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-text">Crawling in Progress...</span>';
-        } else {
-            startBtn.innerHTML = '<span class="btn-icon">🚀</span><span class="btn-text">Start Crawling</span>';
-        }
-    }
-
-    function showElement(el) { if (el) el.classList.remove('hidden'); }
-    function hideElement(el) { if (el) el.classList.add('hidden'); }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
+    function hideElement(el) {
+        if (el) el.classList.add('hidden');
     }
 });

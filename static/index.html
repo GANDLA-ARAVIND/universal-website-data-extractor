@@ -42,8 +42,15 @@
                     <p>Supports static HTML and dynamic JavaScript-powered Single Page Applications (SPAs).</p>
                 </div>
 
+                <!-- MODE SELECTOR TABS -->
+                <div class="mode-tabs">
+                    <button type="button" class="tab-btn active" data-mode="single">Single Website</button>
+                    <button type="button" class="tab-btn" data-mode="batch">Batch Websites</button>
+                </div>
+
                 <form id="crawl-form" class="hero-card">
-                    <div class="form-group url-group">
+                    <!-- SINGLE URL INPUT -->
+                    <div id="single-url-container" class="form-group url-group">
                         <label for="target-url">Website URL</label>
                         <div class="input-with-icon">
                             <span class="input-icon">🔗</span>
@@ -55,6 +62,22 @@
                                 autocomplete="off"
                             >
                         </div>
+                    </div>
+
+                    <!-- BATCH MULTI-URL & CSV INPUT (HIDDEN BY DEFAULT) -->
+                    <div id="batch-url-container" class="form-group url-group hidden">
+                        <div class="batch-header-row">
+                            <label for="batch-urls">Target Website URLs (One per line)</label>
+                            <label for="csv-file-input" class="btn btn-outline btn-small csv-upload-btn">
+                                📁 Upload CSV
+                            </label>
+                            <input type="file" id="csv-file-input" accept=".csv,.txt" class="hidden">
+                        </div>
+                        <textarea 
+                            id="batch-urls" 
+                            rows="4" 
+                            placeholder="https://openai.com&#10;https://anthropic.com&#10;https://ai.google"
+                        ></textarea>
                     </div>
 
                     <div class="form-row">
@@ -146,6 +169,61 @@
                 <div class="progress-bar-container">
                     <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
                 </div>
+            </section>
+
+            <!-- LIVE BATCH CRAWL PROGRESS CARD -->
+            <section id="batch-progress-card" class="card progress-card hidden">
+                <div class="progress-card-header">
+                    <div id="batch-status-pill" class="status-pill running">
+                        <span class="pulse-dot"></span>
+                        <span id="batch-progress-status-text">BATCH IN PROGRESS</span>
+                    </div>
+                    <button id="retry-failed-btn" class="btn btn-outline btn-small hidden">
+                        🔄 Retry Failed Websites
+                    </button>
+                </div>
+
+                <div class="processing-grid">
+                    <div class="proc-item">
+                        <span class="proc-label">🌐 Total Websites</span>
+                        <span id="batch-total-sites" class="proc-val">0</span>
+                    </div>
+                    <div class="proc-item">
+                        <span class="proc-label">✅ Completed</span>
+                        <span id="batch-completed-sites" class="proc-val">0</span>
+                    </div>
+                    <div class="proc-item">
+                        <span class="proc-label">⏳ Running</span>
+                        <span id="batch-running-sites" class="proc-val">0</span>
+                    </div>
+                    <div class="proc-item">
+                        <span class="proc-label">❌ Failed</span>
+                        <span id="batch-failed-sites" class="proc-val">0</span>
+                    </div>
+                </div>
+
+                <div class="progress-bar-container">
+                    <div id="batch-progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+                </div>
+
+                <div class="table-container batch-table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Website</th>
+                                <th>Status</th>
+                                <th>Pages</th>
+                                <th>Images</th>
+                                <th>Links</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batch-jobs-table-body">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
 
                 <!-- LIVE ACTIVITY CONSOLE -->
                 <div class="activity-console">
@@ -280,6 +358,18 @@
                     <button class="btn btn-outline export-btn" data-format="markdown">
                         <span class="btn-icon">📝</span>
                         <span>Export Markdown</span>
+                    </button>
+                    <button class="btn btn-outline export-btn" data-format="pdf">
+                        <span class="btn-icon">📄</span>
+                        <span>Export PDF</span>
+                    </button>
+                    <button class="btn btn-outline export-btn" data-format="docx">
+                        <span class="btn-icon">📘</span>
+                        <span>Export Word</span>
+                    </button>
+                    <button class="btn btn-outline export-btn" data-format="xlsx">
+                        <span class="btn-icon">📈</span>
+                        <span>Export Excel</span>
                     </button>
                 </div>
             </section>
