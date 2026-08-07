@@ -29,11 +29,24 @@ from src.db.session import async_engine
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """FastAPI Lifespan Context Manager.
 
-    Auto-creates database tables on application startup.
+    Auto-creates database tables and performs column migrations on application startup.
     """
     logger.info("Initializing database tables...")
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        # Auto-migrate SQLite schema for added columns
+        if settings.USE_SQLITE or "sqlite" in settings.ASYNC_DATABASE_URI:
+            from sqlalchemy import text
+            res = await conn.execute(text("PRAGMA table_info(crawl_jobs)"))
+            cols = {row[1] for row in res.fetchall()}
+            if "crawl_mode" not in cols:
+                logger.info("Adding 'crawl_mode' column to 'crawl_jobs' table...")
+                await conn.execute(text("ALTER TABLE crawl_jobs ADD COLUMN crawl_mode VARCHAR(32) DEFAULT 'SINGLE'"))
+            if "batch_id" not in cols:
+                logger.info("Adding 'batch_id' column to 'crawl_jobs' table...")
+                await conn.execute(text("ALTER TABLE crawl_jobs ADD COLUMN batch_id CHAR(36)"))
+
     logger.info("Database tables initialized successfully.")
     yield
     logger.info("Shutting down database engine...")
