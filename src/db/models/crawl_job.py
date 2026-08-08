@@ -14,6 +14,7 @@ from src.db.base import Base
 if TYPE_CHECKING:
     from src.db.models.batch_job import BatchJob
     from src.db.models.page import ExtractedPage
+    from src.db.models.project import Project
     from src.db.models.statistic import CrawlStatistic
 
 
@@ -52,6 +53,11 @@ class CrawlJob(Base):
         nullable=False,
         index=True,
     )
+    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     batch_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         ForeignKey("batch_jobs.id", ondelete="CASCADE"),
         nullable=True,
@@ -65,6 +71,9 @@ class CrawlJob(Base):
     )
 
     # Relationships
+    project: Mapped[Optional["Project"]] = relationship(
+        "Project", back_populates="crawl_jobs"
+    )
     batch: Mapped[Optional["BatchJob"]] = relationship(
         "BatchJob", back_populates="jobs"
     )

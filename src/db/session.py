@@ -24,6 +24,7 @@ else:
     engine_kwargs["pool_pre_ping"] = True
     engine_kwargs["pool_size"] = 10
     engine_kwargs["max_overflow"] = 20
+    engine_kwargs["pool_recycle"] = 3600
 
 # Create async engine
 async_engine = create_async_engine(

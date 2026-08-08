@@ -49,6 +49,9 @@ class ExtractedPageResponse(BaseModel):
     model_config = {"from_attributes": True, "populate_by_name": True}
 
 
+from src.schemas.common import PageMeta
+
+
 class PaginatedPageResultsResponse(BaseModel):
     """Paginated wrapper for extracted pages list API."""
 
@@ -56,3 +59,4 @@ class PaginatedPageResultsResponse(BaseModel):
     page: int
     limit: int
     data: List[ExtractedPageResponse]
+    meta: Optional[PageMeta] = None

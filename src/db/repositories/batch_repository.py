@@ -30,11 +30,13 @@ class BatchRepository:
         max_depth: int = 2,
         max_pages: int = 50,
         render_js: bool = False,
+        project_id: Optional[uuid.UUID] = None,
     ) -> BatchJob:
         """Persists a new BatchJob parent and child CrawlJob records."""
         batch = BatchJob(
             status=CrawlStatus.PENDING,
             total_urls=len(urls),
+            project_id=project_id,
         )
         self.session.add(batch)
         await self.session.flush()
@@ -43,6 +45,7 @@ class BatchRepository:
             job = CrawlJob(
                 seed_url=url,
                 batch_id=batch.id,
+                project_id=project_id,
                 crawl_mode=CrawlMode.BATCH,
                 status=CrawlStatus.PENDING,
                 max_depth=max_depth,
@@ -149,3 +152,38 @@ class BatchRepository:
             "total_links": total_links,
             "total_duration_sec": float(total_duration),
         }
+
+    async def list_batches(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        status: Optional[CrawlStatus] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+    ) -> Tuple[List[BatchJob], int]:
+        """Retrieves paginated, filtered, and sorted batch jobs history.
+
+        Returns:
+            Tuple[List[BatchJob], int]: (Batch jobs list, Total matching records count).
+        """
+        stmt = select(BatchJob).options(selectinload(BatchJob.jobs))
+        count_stmt = select(func.count(BatchJob.id))
+
+        if status:
+            stmt = stmt.where(BatchJob.status == status)
+            count_stmt = count_stmt.where(BatchJob.status == status)
+
+        total_count = (await self.session.execute(count_stmt)).scalar_one() or 0
+
+        sort_col = getattr(BatchJob, sort_by, BatchJob.created_at)
+        if str(sort_order).lower() == "asc":
+            stmt = stmt.order_by(sort_col.asc())
+        else:
+            stmt = stmt.order_by(sort_col.desc())
+
+        offset = (page - 1) * page_size
+        stmt = stmt.offset(offset).limit(page_size)
+
+        result = await self.session.execute(stmt)
+        batches = list(result.scalars().all())
+        return batches, total_count

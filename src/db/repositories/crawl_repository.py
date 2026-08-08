@@ -5,11 +5,11 @@ Encapsulates CRUD operations for CrawlJob state and CrawlStatistic metrics.
 
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
-from sqlalchemy import select
+from typing import List, Optional, Tuple
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models.crawl_job import CrawlJob, CrawlStatus
+from src.db.models.crawl_job import CrawlJob, CrawlMode, CrawlStatus
 from src.db.models.statistic import CrawlStatistic
 
 
@@ -19,30 +19,67 @@ class CrawlRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
+    async def list_jobs(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        status: Optional[CrawlStatus] = None,
+        crawl_mode: Optional[CrawlMode] = None,
+        search: Optional[str] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+    ) -> Tuple[List[CrawlJob], int]:
+        """Retrieves paginated, filtered, and sorted crawl jobs history.
+
+        Returns:
+            Tuple[List[CrawlJob], int]: (Crawl jobs list, Total matching records count).
+        """
+        stmt = select(CrawlJob)
+        count_stmt = select(func.count(CrawlJob.id))
+
+        filters = []
+        if status:
+            filters.append(CrawlJob.status == status)
+        if crawl_mode:
+            filters.append(CrawlJob.crawl_mode == crawl_mode)
+        if search:
+            filters.append(CrawlJob.seed_url.ilike(f"%{search}%"))
+
+        if filters:
+            stmt = stmt.where(*filters)
+            count_stmt = count_stmt.where(*filters)
+
+        total_count = (await self.session.execute(count_stmt)).scalar_one() or 0
+
+        sort_col = getattr(CrawlJob, sort_by, CrawlJob.created_at)
+        if str(sort_order).lower() == "asc":
+            stmt = stmt.order_by(sort_col.asc())
+        else:
+            stmt = stmt.order_by(sort_col.desc())
+
+        offset = (page - 1) * page_size
+        stmt = stmt.offset(offset).limit(page_size)
+
+        result = await self.session.execute(stmt)
+        jobs = list(result.scalars().all())
+        return jobs, total_count
+
     async def create_job(
         self,
         seed_url: str,
         max_depth: int,
         max_pages: int,
         render_js: bool = False,
+        project_id: Optional[uuid.UUID] = None,
     ) -> CrawlJob:
-        """Creates a new CrawlJob database record.
-
-        Args:
-            seed_url (str): Seed website URL.
-            max_depth (int): Maximum depth.
-            max_pages (int): Maximum pages limit.
-            render_js (bool): Playwright rendering flag.
-
-        Returns:
-            CrawlJob: Created ORM instance.
-        """
+        """Creates a new CrawlJob database record."""
         job = CrawlJob(
             seed_url=seed_url,
             status=CrawlStatus.PENDING,
             max_depth=max_depth,
             max_pages=max_pages,
             render_js=render_js,
+            project_id=project_id,
         )
         self.session.add(job)
         await self.session.commit()

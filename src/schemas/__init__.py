@@ -8,6 +8,14 @@ from src.schemas.page import (
     PaginatedPageResultsResponse,
 )
 from src.schemas.export import ExportFormatEnum, ExportRequest
+from src.schemas.dataset import (
+    StandardCrawlDataset,
+    BatchDataset,
+    BatchWebsiteItem,
+    BatchMetadata,
+    BatchStatistics,
+    BatchSummary,
+)
 
 __all__ = [
     "CrawlCreateRequest",
@@ -19,4 +27,10 @@ __all__ = [
     "PaginatedPageResultsResponse",
     "ExportFormatEnum",
     "ExportRequest",
+    "StandardCrawlDataset",
+    "BatchDataset",
+    "BatchWebsiteItem",
+    "BatchMetadata",
+    "BatchStatistics",
+    "BatchSummary",
 ]

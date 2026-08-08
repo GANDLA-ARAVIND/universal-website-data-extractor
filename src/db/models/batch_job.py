@@ -1,11 +1,7 @@
-"""BatchJob ORM Model.
-
-Represents a multi-website batch crawling request containing individual crawl jobs.
-"""
-
+import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
-from sqlalchemy import DateTime, Enum, Integer
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.base import Base
@@ -13,6 +9,7 @@ from src.db.models.crawl_job import CrawlStatus
 
 if TYPE_CHECKING:
     from src.db.models.crawl_job import CrawlJob
+    from src.db.models.project import Project
 
 
 class BatchJob(Base):
@@ -20,6 +17,11 @@ class BatchJob(Base):
 
     __tablename__ = "batch_jobs"
 
+    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     status: Mapped[CrawlStatus] = mapped_column(
         Enum(CrawlStatus, native_enum=False),
         default=CrawlStatus.PENDING,
@@ -32,6 +34,9 @@ class BatchJob(Base):
     )
 
     # Relationships
+    project: Mapped[Optional["Project"]] = relationship(
+        "Project", back_populates="batch_jobs"
+    )
     jobs: Mapped[List["CrawlJob"]] = relationship(
         "CrawlJob",
         back_populates="batch",
