@@ -40,12 +40,17 @@ class CrawlCreateRequest(BaseModel):
         return validate_public_url(value)
 
 
+from src.utils.status_classifier import ExtractionStatus
+
+
 class CrawlJobResponse(BaseModel):
     """API Response contract for Crawl Job state."""
 
     id: uuid.UUID
     seed_url: str
     status: CrawlStatus
+    project_id: Optional[uuid.UUID] = None
+    extraction_status: Optional[ExtractionStatus] = None
     max_depth: int
     max_pages: int
     render_js: bool
