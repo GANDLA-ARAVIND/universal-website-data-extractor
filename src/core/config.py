@@ -43,6 +43,26 @@ class Settings(BaseSettings):
     PLAYWRIGHT_HEADLESS: bool = True
     MAX_CONCURRENT_BATCH_JOBS: int = 3
 
+    # Phase 1 Security & Hardening Settings
+    ENABLE_SSRF_PROTECTION: bool = True
+    ALLOW_PRIVATE_IPS: bool = False
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:3000",
+    ]
+    ENABLE_SECURITY_HEADERS: bool = True
+    ENABLE_RATE_LIMITING: bool = True
+    RATE_LIMIT_PER_MINUTE: int = 60
+    LOG_FORMAT: str = "json"
+
+    # Phase 4 Auth & JWT Settings
+    SECRET_KEY: str = "production-secret-key-change-in-env-9876543210"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
+    AUTH_COOKIE_NAME: str = "access_token"
+    AUTH_COOKIE_SECURE: bool = False
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def ASYNC_DATABASE_URI(self) -> str:

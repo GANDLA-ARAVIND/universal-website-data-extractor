@@ -4,9 +4,29 @@ Provides a unified logger configuration with formatted output for tracking
 asynchronous operations, crawling lifecycle events, and exceptions.
 """
 
+import json
 import logging
 import sys
+from datetime import datetime, timezone
 from src.core.config import settings
+
+
+class JSONFormatter(logging.Formatter):
+    """Formats log records as single-line JSON objects for production log collectors."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        log_data = {
+            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "module": record.module,
+            "funcName": record.funcName,
+            "lineno": record.lineno,
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            log_data["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_data)
 
 
 def setup_logging() -> logging.Logger:
@@ -17,14 +37,16 @@ def setup_logging() -> logging.Logger:
     """
     log_level = logging.DEBUG if settings.DEBUG else logging.INFO
 
-    # Custom log format with timestamp, log level, module name, and message
-    log_format = logging.Formatter(
-        fmt="%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    if getattr(settings, "LOG_FORMAT", "json").lower() == "json":
+        formatter = JSONFormatter()
+    else:
+        formatter = logging.Formatter(
+            fmt="%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
 
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(log_format)
+    console_handler.setFormatter(formatter)
     console_handler.setLevel(log_level)
 
     logger = logging.getLogger("web_scraper")

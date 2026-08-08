@@ -12,7 +12,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from datetime import datetime, timezone
 from src.api.v1.router import api_v1_router
+from src.application.services.auth_service import (
+    InvalidCredentialsException,
+    UserAlreadyExistsException,
+)
+from src.application.services.project_service import ProjectNotFoundException
 from src.core.config import settings
 from src.core.exceptions import (
     BaseAppException,
@@ -21,6 +27,7 @@ from src.core.exceptions import (
     InvalidURLException,
 )
 from src.core.logging import logger
+from src.core.middleware import RateLimitMiddleware, SecurityHeadersMiddleware
 from src.db.base import Base
 from src.db.session import async_engine
 
@@ -29,25 +36,14 @@ from src.db.session import async_engine
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """FastAPI Lifespan Context Manager.
 
-    Auto-creates database tables and performs column migrations on application startup.
+    Ensures database connection initialization and clean engine shutdown.
+    Schema migrations are managed by Alembic.
     """
-    logger.info("Initializing database tables...")
+    logger.info("Initializing database connection pool...")
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-        # Auto-migrate SQLite schema for added columns
-        if settings.USE_SQLITE or "sqlite" in settings.ASYNC_DATABASE_URI:
-            from sqlalchemy import text
-            res = await conn.execute(text("PRAGMA table_info(crawl_jobs)"))
-            cols = {row[1] for row in res.fetchall()}
-            if "crawl_mode" not in cols:
-                logger.info("Adding 'crawl_mode' column to 'crawl_jobs' table...")
-                await conn.execute(text("ALTER TABLE crawl_jobs ADD COLUMN crawl_mode VARCHAR(32) DEFAULT 'SINGLE'"))
-            if "batch_id" not in cols:
-                logger.info("Adding 'batch_id' column to 'crawl_jobs' table...")
-                await conn.execute(text("ALTER TABLE crawl_jobs ADD COLUMN batch_id CHAR(36)"))
-
-    logger.info("Database tables initialized successfully.")
+    logger.info("Database connection engine ready.")
     yield
     logger.info("Shutting down database engine...")
     await async_engine.dispose()
@@ -63,35 +59,77 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
-# CORS Middleware Setup
+# Register Security & Rate Limit Middlewares
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RateLimitMiddleware, requests_per_minute=settings.RATE_LIMIT_PER_MINUTE)
+
+# Configurable CORS Middleware Setup
+cors_origins = getattr(settings, "CORS_ORIGINS", ["*"])
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
 
-# Exception Handlers
+# RFC 7807 Problem Details Exception Handlers
 @app.exception_handler(BaseAppException)
 async def domain_exception_handler(
     request: Request, exc: BaseAppException
 ) -> JSONResponse:
-    """Handles domain-specific application exceptions."""
+    """Handles domain-specific application exceptions formatted as RFC 7807 Problem Details."""
     status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    error_type = "internal-server-error"
 
     if isinstance(exc, InvalidURLException):
         status_code = status.HTTP_400_BAD_REQUEST
-    elif isinstance(exc, CrawlJobNotFoundException):
+        error_type = "invalid-url"
+    elif isinstance(exc, CrawlJobNotFoundException) or isinstance(exc, ProjectNotFoundException):
         status_code = status.HTTP_404_NOT_FOUND
+        error_type = "not-found"
     elif isinstance(exc, ExportException):
         status_code = status.HTTP_400_BAD_REQUEST
+        error_type = "export-error"
+    elif isinstance(exc, UserAlreadyExistsException):
+        status_code = status.HTTP_409_CONFLICT
+        error_type = "user-already-exists"
+    elif isinstance(exc, InvalidCredentialsException):
+        status_code = status.HTTP_401_UNAUTHORIZED
+        error_type = "invalid-credentials"
 
     logger.warning(f"Domain Exception [{status_code}] on {request.url.path}: {exc.message}")
     return JSONResponse(
         status_code=status_code,
-        content={"detail": exc.message, "type": exc.__class__.__name__},
+        content={
+            "type": exc.__class__.__name__,
+            "error_type": f"https://errors.websiteintelligence.dev/{error_type}",
+            "title": exc.__class__.__name__,
+            "status": status_code,
+            "detail": exc.message,
+            "instance": request.url.path,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(
+    request: Request, exc: Exception
+) -> JSONResponse:
+    """Handles unhandled unexpected exceptions as RFC 7807 Problem Details."""
+    logger.error(f"Unhandled Exception on {request.url.path}: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "type": "https://errors.websiteintelligence.dev/internal-server-error",
+            "title": "InternalServerError",
+            "status": 500,
+            "detail": "An internal server error occurred while processing the request.",
+            "instance": request.url.path,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
     )
 
 
