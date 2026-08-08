@@ -16,6 +16,10 @@ class CrawlCreateRequest(BaseModel):
         description="Target seed website URL (must be valid HTTP/HTTPS).",
         examples=["https://news.ycombinator.com"],
     )
+    project_id: Optional[uuid.UUID] = Field(
+        default=None,
+        description="Optional project UUID to associate this crawl job with.",
+    )
     max_depth: int = Field(
         default=2,
         ge=0,

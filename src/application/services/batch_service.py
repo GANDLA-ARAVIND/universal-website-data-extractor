@@ -16,6 +16,7 @@ from src.core.config import settings
 from src.core.exceptions import CrawlJobNotFoundException, InvalidURLException
 from src.crawler.engine import CrawlEngine
 from src.db.models.crawl_job import CrawlJob, CrawlStatus
+from src.db.models.user import User
 from src.db.repositories.batch_repository import BatchRepository
 from src.db.repositories.crawl_repository import CrawlRepository
 from src.schemas.batch import (
@@ -76,6 +77,7 @@ class BatchService:
             max_depth=request.max_depth,
             max_pages=request.max_pages,
             render_js=request.render_js,
+            project_id=request.project_id,
         )
 
         background_tasks.add_task(
@@ -169,15 +171,14 @@ class BatchService:
         self,
         batch_id: uuid.UUID,
         background_tasks: BackgroundTasks,
+        current_user: Optional[User] = None,
     ) -> BatchJobResponse:
         """Re-triggers crawl execution ONLY for child jobs in a batch that failed."""
-        batch = await self.batch_repo.get_batch_by_id(batch_id)
-        if not batch:
-            raise CrawlJobNotFoundException(f"BatchJob '{batch_id}' not found.")
+        await self.get_batch_status(batch_id, current_user=current_user)
 
         failed_jobs = await self.batch_repo.get_failed_jobs(batch_id)
         if not failed_jobs:
-            return await self.get_batch_status(batch_id)
+            return await self.get_batch_status(batch_id, current_user=current_user)
 
         failed_ids = [j.id for j in failed_jobs]
         for fj in failed_jobs:
@@ -195,13 +196,22 @@ class BatchService:
             job_ids_to_run=failed_ids,
         )
 
-        return await self.get_batch_status(batch_id)
+        return await self.get_batch_status(batch_id, current_user=current_user)
 
-    async def get_batch_status(self, batch_id: uuid.UUID) -> BatchJobResponse:
+    async def get_batch_status(
+        self, batch_id: uuid.UUID, current_user: Optional[User] = None
+    ) -> BatchJobResponse:
         """Fetches progress summary, child jobs, and progress percentage for a batch."""
         batch = await self.batch_repo.get_batch_by_id(batch_id)
         if not batch:
             raise CrawlJobNotFoundException(f"BatchJob '{batch_id}' not found.")
+
+        if batch.project_id:
+            from src.db.repositories.project_repository import ProjectRepository
+            proj_repo = ProjectRepository(self.batch_repo.session)
+            project = await proj_repo.get_by_id(batch.project_id)
+            if not project or not current_user or project.user_id != current_user.id:
+                raise CrawlJobNotFoundException(f"BatchJob '{batch_id}' not found.")
 
         total = len(batch.jobs)
         completed = sum(1 for j in batch.jobs if j.status == CrawlStatus.COMPLETED)
@@ -217,6 +227,7 @@ class BatchService:
         return BatchJobResponse(
             id=batch.id,
             status=batch.status,
+            project_id=batch.project_id,
             total_urls=total,
             completed_urls=completed,
             running_urls=running,
@@ -227,10 +238,52 @@ class BatchService:
             jobs=child_job_responses,
         )
 
+    async def list_batches(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        status: Optional[CrawlStatus] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+    ) -> Tuple[List[BatchJobResponse], int]:
+        """Retrieves paginated, filtered, and sorted batch jobs history list."""
+        batches, total_count = await self.batch_repo.list_batches(
+            page=page,
+            page_size=page_size,
+            status=status,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
+        batch_responses = []
+        for b in batches:
+            total = len(b.jobs)
+            completed = sum(1 for j in b.jobs if j.status == CrawlStatus.COMPLETED)
+            running = sum(1 for j in b.jobs if j.status == CrawlStatus.RUNNING)
+            failed = sum(1 for j in b.jobs if j.status == CrawlStatus.FAILED)
+            pct = round(((completed + failed) / total) * 100, 1) if total > 0 else 0.0
+            child_job_responses = [CrawlJobResponse.model_validate(j) for j in b.jobs]
+
+            res = BatchJobResponse(
+                id=b.id,
+                status=b.status,
+                total_urls=total,
+                completed_urls=completed,
+                running_urls=running,
+                failed_urls=failed,
+                progress_percentage=pct,
+                created_at=b.created_at,
+                finished_at=b.finished_at,
+                jobs=child_job_responses,
+            )
+            batch_responses.append(res)
+
+        return batch_responses, total_count
+
     async def get_batch_statistics(
-        self, batch_id: uuid.UUID
+        self, batch_id: uuid.UUID, current_user: Optional[User] = None
     ) -> BatchStatisticResponse:
         """Retrieves aggregated metrics across all websites in a batch."""
+        await self.get_batch_status(batch_id, current_user=current_user)
         stats = await self.batch_repo.get_batch_statistics(batch_id)
         if not stats:
             raise CrawlJobNotFoundException(f"BatchJob '{batch_id}' not found.")

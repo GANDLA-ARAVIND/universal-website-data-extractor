@@ -129,3 +129,44 @@ async def test_batch_export_all_formats(
         )
         assert res.status_code == 200, f"Failed for format {fmt}"
         assert "attachment; filename=" in res.headers["content-disposition"]
+
+
+@pytest.mark.asyncio
+async def test_batch_dataset_endpoint(
+    async_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """Verifies GET /api/v1/batch/{batch_id}/dataset endpoint returns valid BatchDataset."""
+    batch = BatchJob(status=CrawlStatus.COMPLETED, total_urls=1)
+    db_session.add(batch)
+    await db_session.flush()
+
+    job = CrawlJob(
+        batch_id=batch.id,
+        seed_url="https://site-ds.com",
+        crawl_mode=CrawlMode.BATCH,
+        status=CrawlStatus.COMPLETED,
+        max_depth=1,
+        max_pages=5,
+    )
+    db_session.add(job)
+    await db_session.flush()
+
+    page = ExtractedPage(
+        job_id=job.id,
+        url="https://site-ds.com",
+        normalized_url="https://site-ds.com",
+        status_code=200,
+        depth=0,
+        title="Site DS",
+    )
+    db_session.add(page)
+    await db_session.commit()
+
+    res = await async_client.get(f"/api/v1/batch/{batch.id}/dataset")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["batch_metadata"]["batch_id"] == str(batch.id)
+    assert len(data["websites"]) == 1
+    assert data["websites"][0]["website_url"] == "https://site-ds.com"
+    assert data["websites"][0]["dataset"]["website_info"]["domain"] == "site-ds.com"
+

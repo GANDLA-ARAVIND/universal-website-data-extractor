@@ -3,6 +3,7 @@
 import pytest
 from src.core.exceptions import InvalidURLException
 from src.utils.url_utils import (
+    is_crawlable_html_url,
     is_external_link,
     is_same_domain,
     normalize_url,
@@ -54,3 +55,14 @@ def test_is_external_link() -> None:
     base = "https://example.com"
     assert is_external_link(base, "https://example.com/page2") is False
     assert is_external_link(base, "https://github.com") is True
+
+
+def test_is_crawlable_html_url() -> None:
+    """Verifies HTML page vs non-HTML static asset URL identification."""
+    assert is_crawlable_html_url("https://example.com/about") is True
+    assert is_crawlable_html_url("https://example.com/page.html") is True
+    assert is_crawlable_html_url("https://example.com/document.pdf") is False
+    assert is_crawlable_html_url("https://example.com/image.png") is False
+    assert is_crawlable_html_url("https://example.com/archive.zip") is False
+    assert is_crawlable_html_url("ftp://example.com/file.txt") is False
+
