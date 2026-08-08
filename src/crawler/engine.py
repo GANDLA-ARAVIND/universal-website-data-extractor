@@ -19,7 +19,7 @@ from src.crawler.fetchers import BaseFetcher, DynamicFetcher, StaticFetcher
 from src.db.models.crawl_job import CrawlStatus
 from src.db.repositories.crawl_repository import CrawlRepository
 from src.db.repositories.page_repository import PageRepository
-from src.utils.url_utils import is_same_domain, normalize_url
+from src.utils.url_utils import is_crawlable_html_url, is_same_domain, normalize_url
 
 
 class CrawlEngine:
@@ -82,48 +82,60 @@ class CrawlEngine:
                     f"Depth {current_depth}/{self.max_depth}: {current_url}"
                 )
 
-                # Fetch page content
-                fetch_res = await fetcher.fetch(current_url)
+                try:
+                    # Fetch page content
+                    fetch_res = await fetcher.fetch(current_url)
 
-                if fetch_res.is_success:
-                    # Extract HTML features
-                    extracted_dto = self.extractor.parse(
-                        html=fetch_res.html_content,
-                        page_url=fetch_res.url,
-                    )
+                    if fetch_res.is_success:
+                        # Extract HTML features
+                        extracted_dto = self.extractor.parse(
+                            html=fetch_res.html_content,
+                            page_url=fetch_res.url,
+                        )
 
-                    # Save to database
-                    saved_page = await self.page_repo.save_extracted_page(
-                        job_id=self.job_id,
-                        dto=extracted_dto,
-                        depth=current_depth,
-                        status_code=fetch_res.status_code,
-                        response_time_ms=fetch_res.response_time_ms,
-                    )
+                        # Merge warnings from fetcher into DTO
+                        if fetch_res.warnings:
+                            extracted_dto.warnings.extend(fetch_res.warnings)
 
-                    pages_crawled += 1
-                    total_images_count += len(extracted_dto.images)
-                    total_links_count += len(extracted_dto.internal_links) + len(
-                        extracted_dto.external_links
-                    )
+                        # Save to database
+                        saved_page = await self.page_repo.save_extracted_page(
+                            job_id=self.job_id,
+                            dto=extracted_dto,
+                            depth=current_depth,
+                            status_code=fetch_res.status_code,
+                            response_time_ms=fetch_res.response_time_ms,
+                        )
 
-                    # Discover and enqueue internal links if depth permits
-                    if current_depth < self.max_depth:
-                        for link_obj in extracted_dto.internal_links:
-                            target = link_obj["target_url"]
-                            target_norm = normalize_url(target)
+                        pages_crawled += 1
+                        total_images_count += len(extracted_dto.images)
+                        total_links_count += len(extracted_dto.internal_links) + len(
+                            extracted_dto.external_links
+                        )
 
-                            if (
-                                target_norm not in visited_urls
-                                and is_same_domain(self.seed_url, target)
-                            ):
-                                visited_urls.add(target_norm)
-                                queue.append((target, current_depth + 1))
-                else:
+                        # Discover and enqueue internal links if depth permits
+                        if current_depth < self.max_depth:
+                            for link_obj in extracted_dto.internal_links:
+                                target = link_obj["target_url"]
+                                target_norm = normalize_url(target)
+
+                                if (
+                                    target_norm not in visited_urls
+                                    and is_same_domain(self.seed_url, target)
+                                    and is_crawlable_html_url(target)
+                                ):
+                                    visited_urls.add(target_norm)
+                                    queue.append((target, current_depth + 1))
+                    else:
+                        failed_pages += 1
+                        logger.warning(
+                            f"Job {self.job_id} | Fetch failed for '{current_url}' "
+                            f"Status: {fetch_res.status_code} Error: {fetch_res.error_message}"
+                        )
+                except Exception as page_exc:
                     failed_pages += 1
-                    logger.warning(
-                        f"Job {self.job_id} | Fetch failed for '{current_url}' "
-                        f"Status: {fetch_res.status_code} Error: {fetch_res.error_message}"
+                    logger.error(
+                        f"Job {self.job_id} | Unexpected failure processing page '{current_url}': {page_exc}",
+                        exc_info=True,
                     )
 
                 # Polite delay between requests
@@ -131,6 +143,13 @@ class CrawlEngine:
                     await asyncio.sleep(self.crawl_delay)
 
             total_duration = round(time.perf_counter() - start_time, 2)
+
+            # Determine final status
+            final_status = (
+                CrawlStatus.COMPLETED
+                if pages_crawled > 0
+                else (CrawlStatus.FAILED if failed_pages > 0 else CrawlStatus.COMPLETED)
+            )
 
             # Persist execution statistics
             await self.crawl_repo.create_or_update_statistics(
@@ -142,14 +161,14 @@ class CrawlEngine:
                 total_duration_sec=total_duration,
             )
 
-            # Mark job COMPLETED
+            # Mark job final status
             await self.crawl_repo.update_job_status(
                 self.job_id,
-                CrawlStatus.COMPLETED,
+                final_status,
                 finished_at=datetime.now(timezone.utc),
             )
             logger.info(
-                f"Job {self.job_id} COMPLETED. Pages: {pages_crawled}, "
+                f"Job {self.job_id} {final_status.value}. Pages: {pages_crawled}, "
                 f"Failed: {failed_pages}, Images: {total_images_count}, Links: {total_links_count}, "
                 f"Duration: {total_duration}s"
             )
@@ -168,3 +187,4 @@ class CrawlEngine:
             )
         finally:
             await fetcher.close()
+

@@ -5,17 +5,18 @@ paginated results fetching, and metrics aggregation.
 """
 
 import uuid
-from typing import Tuple
+from typing import Optional, Tuple
 from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import CrawlJobNotFoundException
 from src.core.logging import logger
 from src.crawler.engine import CrawlEngine
-from src.db.models.crawl_job import CrawlJob
+from src.db.models.crawl_job import CrawlJob, CrawlMode, CrawlStatus
 from src.db.models.statistic import CrawlStatistic
 from src.db.repositories.crawl_repository import CrawlRepository
 from src.db.repositories.page_repository import PageRepository
+from src.db.models.user import User
 from src.schemas.crawl import CrawlCreateRequest
 
 
@@ -26,6 +27,27 @@ class CrawlService:
         self.session = session
         self.crawl_repo = CrawlRepository(session)
         self.page_repo = PageRepository(session)
+
+    async def list_jobs(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        status: Optional[CrawlStatus] = None,
+        crawl_mode: Optional[CrawlMode] = None,
+        search: Optional[str] = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+    ) -> Tuple[list, int]:
+        """Retrieves paginated, filtered, and sorted crawl jobs list."""
+        return await self.crawl_repo.list_jobs(
+            page=page,
+            page_size=page_size,
+            status=status,
+            crawl_mode=crawl_mode,
+            search=search,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
 
     async def initiate_crawl(
         self,
@@ -46,6 +68,7 @@ class CrawlService:
             max_depth=request.max_depth,
             max_pages=request.max_pages,
             render_js=request.render_js,
+            project_id=request.project_id,
         )
 
         # Dispatch asynchronous crawl task
@@ -83,35 +106,48 @@ class CrawlService:
             )
             await engine.execute()
 
-    async def get_job_status(self, job_id: uuid.UUID) -> CrawlJob:
-        """Fetches crawl job entity by ID.
+    async def get_job_status(
+        self, job_id: uuid.UUID, current_user: Optional[User] = None
+    ) -> CrawlJob:
+        """Fetches crawl job entity by ID, enforcing user ownership if job belongs to a project.
 
         Raises:
-            CrawlJobNotFoundException: If job does not exist.
+            CrawlJobNotFoundException: If job does not exist or user is unauthorized.
         """
         job = await self.crawl_repo.get_job_by_id(job_id)
         if not job:
             raise CrawlJobNotFoundException(f"Crawl job with ID '{job_id}' was not found.")
+
+        if job.project_id:
+            from src.db.repositories.project_repository import ProjectRepository
+            proj_repo = ProjectRepository(self.session)
+            project = await proj_repo.get_by_id(job.project_id)
+            if not project or not current_user or project.user_id != current_user.id:
+                raise CrawlJobNotFoundException(f"Crawl job with ID '{job_id}' was not found.")
+
         return job
 
     async def get_job_results(
-        self, job_id: uuid.UUID, page: int = 1, limit: int = 20
+        self,
+        job_id: uuid.UUID,
+        page: int = 1,
+        limit: int = 20,
+        current_user: Optional[User] = None,
     ) -> Tuple[list, int]:
         """Retrieves paginated extracted pages for a crawl job."""
-        # Ensure job exists
-        await self.get_job_status(job_id)
+        await self.get_job_status(job_id, current_user=current_user)
 
         skip = (page - 1) * limit
         return await self.page_repo.get_pages_by_job_id(job_id=job_id, skip=skip, limit=limit)
 
-    async def get_job_statistics(self, job_id: uuid.UUID) -> CrawlStatistic:
+    async def get_job_statistics(
+        self, job_id: uuid.UUID, current_user: Optional[User] = None
+    ) -> CrawlStatistic:
         """Retrieves execution metrics for a crawl job."""
-        # Ensure job exists
-        await self.get_job_status(job_id)
+        await self.get_job_status(job_id, current_user=current_user)
 
         stats = await self.crawl_repo.get_statistics_by_job_id(job_id)
         if not stats:
-            # Fallback zero stats if stats record not created yet
             stats = CrawlStatistic(
                 job_id=job_id,
                 pages_crawled=0,

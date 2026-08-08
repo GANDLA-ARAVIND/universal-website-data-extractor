@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 from urllib.parse import urlparse
 
 from src.db.models.crawl_job import CrawlJob
@@ -25,11 +25,21 @@ class BaseExporter(ABC):
         stats: Optional[CrawlStatistic] = None,
     ) -> Tuple[bytes, str, str]:
         """
-        Generates the export file payload.
+        Generates the export file payload for a single crawl job.
         Returns:
             Tuple of (raw_bytes, filename, media_type)
         """
         pass
+
+    async def export_batch_dataset(
+        self,
+        batch_dataset: Any,
+    ) -> Tuple[bytes, str, str]:
+        """
+        Generates the export file payload for a multi-website BatchDataset.
+        Default fallback delegates to single export using aggregated synthetic objects.
+        """
+        raise NotImplementedError("Batch dataset export not implemented for this strategy.")
 
     def generate_filename(self, seed_url: str, job_id_str: str, ext: str) -> str:
         """Utility helper to generate a domain & date-aware export filename."""

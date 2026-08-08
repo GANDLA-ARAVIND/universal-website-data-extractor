@@ -25,6 +25,8 @@ class ExtractedContentDTO:
     images: List[Dict[str, Optional[str]]] = field(default_factory=list)
     internal_links: List[Dict[str, Any]] = field(default_factory=list)
     external_links: List[Dict[str, Any]] = field(default_factory=list)
+    errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
 
 
 class HTMLExtractor:

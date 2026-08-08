@@ -280,3 +280,85 @@ class XlsxExporter(BaseExporter):
             filename,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
+
+    async def export_batch_dataset(
+        self,
+        batch_dataset: Any,
+    ) -> Tuple[bytes, str, str]:
+        """Generates multi-tab Excel workbook for a BatchDataset."""
+        wb = openpyxl.Workbook()
+
+        header_fill = PatternFill(start_color="2563EB", end_color="2563EB", fill_type="solid")
+        header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+
+        def style_headers(ws: Any, headers: List[str]) -> None:
+            ws.append([clean_val(h) for h in headers])
+            ws.freeze_panes = "A2"
+            for col_idx in range(1, len(headers) + 1):
+                cell = ws.cell(row=1, column=col_idx)
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        def auto_fit_columns(ws: Any) -> None:
+            for col in ws.columns:
+                max_len = max(len(str(cell.value or "")) for cell in col)
+                col_letter = get_column_letter(col[0].column)
+                ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
+        # 1. WORKSHEET: Batch Overview
+        ws_overview: Any = wb.active
+        ws_overview.title = "Batch Overview"
+        style_headers(ws_overview, ["Metric Name", "Metric Value"])
+        ws_overview.append(["Batch ID", str(batch_dataset.batch_metadata.batch_id)])
+        ws_overview.append(["Overall Status", batch_dataset.batch_statistics.overall_status])
+        ws_overview.append(["Total Target Websites", batch_dataset.batch_statistics.total_websites])
+        ws_overview.append(["Successful Websites", batch_dataset.batch_statistics.successful_websites])
+        ws_overview.append(["Failed Websites", batch_dataset.batch_statistics.failed_websites])
+        ws_overview.append(["Total Pages Extracted", batch_dataset.batch_statistics.total_pages])
+        ws_overview.append(["Total Images Extracted", batch_dataset.batch_statistics.total_images])
+        ws_overview.append(["Total Links Discovered", batch_dataset.batch_statistics.total_links])
+        ws_overview.append(["Total Execution Duration (s)", batch_dataset.batch_statistics.total_duration_sec])
+        auto_fit_columns(ws_overview)
+
+        # 2. WORKSHEET: Websites
+        ws_sites: Any = wb.create_sheet(title="Websites")
+        style_headers(ws_sites, ["Website URL", "Status", "Duration (s)", "Pages Extracted", "Errors"])
+        for site in batch_dataset.websites:
+            pg_cnt = len(site.dataset.pages) if site.dataset and site.dataset.pages else 0
+            err_str = "; ".join(site.errors) if site.errors else ""
+            ws_sites.append([clean_val(site.website_url), clean_val(site.status), site.duration_sec, pg_cnt, clean_val(err_str)])
+        auto_fit_columns(ws_sites)
+
+        # 3. WORKSHEET: All Pages
+        ws_pages: Any = wb.create_sheet(title="All Pages")
+        style_headers(ws_pages, ["Domain", "URL", "Status Code", "Depth", "Title", "Meta Description", "Links", "Images", "Latency (ms)"])
+        for site in batch_dataset.websites:
+            if site.dataset and site.dataset.pages:
+                for p in site.dataset.pages:
+                    ws_pages.append([
+                        clean_val(site.dataset.website_info.domain),
+                        clean_val(p.url),
+                        p.status_code,
+                        p.depth,
+                        clean_val(p.title),
+                        clean_val(p.meta_description),
+                        len(p.internal_links) + len(p.external_links),
+                        len(p.images),
+                        p.response_time_ms,
+                    ])
+        auto_fit_columns(ws_pages)
+
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        xlsx_bytes = buffer.getvalue()
+        buffer.close()
+
+        short_id = str(batch_dataset.batch_metadata.batch_id)[:8]
+        filename = f"batch_export_{short_id}.xlsx"
+        return (
+            xlsx_bytes,
+            filename,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+

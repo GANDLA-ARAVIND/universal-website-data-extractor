@@ -4,8 +4,8 @@ Defines the abstract interface for all page retrieval strategies (HTTP vs Playwr
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
 
 
 @dataclass
@@ -17,6 +17,9 @@ class FetchResult:
     html_content: str
     response_time_ms: float
     error_message: Optional[str] = None
+    redirect_url: Optional[str] = None
+    warnings: List[str] = field(default_factory=list)
+    headers: Dict[str, str] = field(default_factory=dict)
 
     @property
     def is_success(self) -> bool:

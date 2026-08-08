@@ -1,5 +1,5 @@
 import json
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from src.application.services.exporters.base import BaseExporter
 from src.db.models.crawl_job import CrawlJob
@@ -62,3 +62,15 @@ class JsonExporter(BaseExporter):
         json_str = json.dumps(export_data, indent=2, ensure_ascii=False)
         filename = self.generate_filename(job.seed_url, str(job.id), "json")
         return json_str.encode("utf-8"), filename, "application/json"
+
+    async def export_batch_dataset(
+        self,
+        batch_dataset: Any,
+    ) -> Tuple[bytes, str, str]:
+        """Generates JSON payload for a BatchDataset."""
+        data = batch_dataset.model_dump(mode="json")
+        json_str = json.dumps(data, indent=2, ensure_ascii=False)
+        short_id = str(batch_dataset.batch_metadata.batch_id)[:8]
+        filename = f"batch_export_{short_id}.json"
+        return json_str.encode("utf-8"), filename, "application/json"
+
