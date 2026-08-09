@@ -52,13 +52,13 @@
                     </a>
                 </div>
 
-                <!-- SECONDARY AI SECTION (BELOW MAIN NAV WITH COMING SOON BADGE) -->
+                <!-- SECONDARY AI SECTION (ACTIVE AI WORKSPACE MODULE) -->
                 <div class="nav-section" style="margin-top: auto;">
-                    <span class="nav-section-title">Future Modules</span>
+                    <span class="nav-section-title">AI Intelligence</span>
                     <a href="#ai-workspace" class="nav-item" data-view="ai-workspace">
-                        <i data-lucide="sparkles"></i>
+                        <i data-lucide="sparkles" style="color: var(--accent-primary);"></i>
                         <span>AI Workspace</span>
-                        <span class="badge-coming-soon">Coming Soon</span>
+                        <span class="badge badge-active" style="margin-left: auto;">Active</span>
                     </a>
                 </div>
             </nav>
@@ -498,7 +498,7 @@
                                     <div>
                                         <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
                                             <span>AI Intelligence Insights Hub</span>
-                                            <span class="badge-coming-soon">Coming Soon</span>
+                                            <span class="badge badge-active">Active</span>
                                         </div>
                                         <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
                                             Autonomous multi-site research agents, documentation synthesizers, and vector embeddings will integrate seamlessly into this container.
@@ -526,7 +526,7 @@
                                         <div class="form-field" style="margin-bottom: 20px;">
                                             <label class="form-label" for="single-url-input">Target Website URL *</label>
                                             <div style="position: relative;">
-                                                <input type="url" id="single-url-input" class="input-text" placeholder="https://example.com" value="https://news.ycombinator.com" required style="padding-left: 36px;">
+                                                <input type="url" id="single-url-input" class="input-text" placeholder="https://example.com" value="" required style="padding-left: 36px;">
                                                 <i data-lucide="globe" style="position: absolute; left: 12px; top: 11px; width: 16px; height: 16px; color: var(--text-muted);"></i>
                                             </div>
                                             <span class="form-helper">Enter complete HTTP or HTTPS URL to begin crawling.</span>
@@ -727,8 +727,12 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div style="display: flex; gap: 10px;">
-                                        <a href="#analysis" class="btn btn-primary btn-md">
+                                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                        <button type="button" class="btn btn-primary btn-md" onclick="window.analyzeCurrentCrawlWithAi(window.currentAnalysisJobId);">
+                                            <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
+                                            <span>Analyze with AI ✨</span>
+                                        </button>
+                                        <a href="#analysis" class="btn btn-secondary btn-md">
                                             <i data-lucide="bar-chart-2" style="width: 16px; height: 16px;"></i>
                                             <span>Open Website Analysis</span>
                                         </a>
@@ -764,34 +768,34 @@
                             <div class="card" style="margin-bottom: 24px; padding: 20px;">
                                 <div style="font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
                                     <span>Generated Business & Technical Reports</span>
-                                    <span class="badge badge-success">4 Formats Ready</span>
+                                    <span class="badge badge-success">6 Formats Ready</span>
                                 </div>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
-                                    <div class="card card-interactive" onclick="window.showToast({type:'success', title:'Downloading PDF Report', message:'ycombinator_single_report.pdf'});">
+                                    <div class="card card-interactive" onclick="window.triggerExportDownload(window.currentAnalysisJobId || window.currentAnalysisBatchId, 'pdf', !!window.currentAnalysisBatchId);">
                                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                                             <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">PDF Report</span>
                                             <span class="badge badge-info">Executive</span>
                                         </div>
-                                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Formatted 9-Section PDF document with structure tree and summaries.</div>
+                                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Formatted PDF document with structure tree and summaries.</div>
                                         <button type="button" class="btn btn-secondary btn-sm" style="width: 100%;">
                                             <i data-lucide="download" style="width:14px; height:14px;"></i>
                                             <span>Download PDF</span>
                                         </button>
                                     </div>
 
-                                    <div class="card card-interactive" onclick="window.showToast({type:'success', title:'Downloading DOCX Report', message:'ycombinator_single_summary.docx'});">
+                                    <div class="card card-interactive" onclick="window.triggerExportDownload(window.currentAnalysisJobId || window.currentAnalysisBatchId, 'docx', !!window.currentAnalysisBatchId);">
                                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                                             <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Word Document</span>
                                             <span class="badge badge-neutral">Technical</span>
                                         </div>
-                                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Editable DOCX report containing extracted paragraphs & data tables.</div>
+                                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Editable DOCX report containing extracted paragraphs & tables.</div>
                                         <button type="button" class="btn btn-secondary btn-sm" style="width: 100%;">
                                             <i data-lucide="download" style="width:14px; height:14px;"></i>
                                             <span>Download DOCX</span>
                                         </button>
                                     </div>
 
-                                    <div class="card card-interactive" onclick="window.showToast({type:'success', title:'Downloading Markdown Dataset', message:'ycombinator_dataset.md'});">
+                                    <div class="card card-interactive" onclick="window.triggerExportDownload(window.currentAnalysisJobId || window.currentAnalysisBatchId, 'markdown', !!window.currentAnalysisBatchId);">
                                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                                             <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Markdown File</span>
                                             <span class="badge badge-neutral">AI Ready</span>
@@ -803,7 +807,7 @@
                                         </button>
                                     </div>
 
-                                    <div class="card card-interactive" onclick="window.showToast({type:'success', title:'Downloading Raw JSON Dataset', message:'ycombinator_dataset.json'});">
+                                    <div class="card card-interactive" onclick="window.triggerExportDownload(window.currentAnalysisJobId || window.currentAnalysisBatchId, 'json', !!window.currentAnalysisBatchId);">
                                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                                             <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Raw JSON</span>
                                             <span class="badge badge-neutral">Developer</span>
@@ -812,6 +816,30 @@
                                         <button type="button" class="btn btn-secondary btn-sm" style="width: 100%;">
                                             <i data-lucide="download" style="width:14px; height:14px;"></i>
                                             <span>Download JSON</span>
+                                        </button>
+                                    </div>
+
+                                    <div class="card card-interactive" onclick="window.triggerExportDownload(window.currentAnalysisJobId || window.currentAnalysisBatchId, 'csv', !!window.currentAnalysisBatchId);">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                            <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">CSV Spreadsheet</span>
+                                            <span class="badge badge-neutral">Data</span>
+                                        </div>
+                                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Structured CSV page records with headings, text, and link counts.</div>
+                                        <button type="button" class="btn btn-secondary btn-sm" style="width: 100%;">
+                                            <i data-lucide="download" style="width:14px; height:14px;"></i>
+                                            <span>Download CSV</span>
+                                        </button>
+                                    </div>
+
+                                    <div class="card card-interactive" onclick="window.triggerExportDownload(window.currentAnalysisJobId || window.currentAnalysisBatchId, 'xlsx', !!window.currentAnalysisBatchId);">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                            <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Excel Workbook</span>
+                                            <span class="badge badge-neutral">Spreadsheet</span>
+                                        </div>
+                                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Multi-sheet XLSX workbook with pages, links, and images tabs.</div>
+                                        <button type="button" class="btn btn-secondary btn-sm" style="width: 100%;">
+                                            <i data-lucide="download" style="width:14px; height:14px;"></i>
+                                            <span>Download XLSX</span>
                                         </button>
                                     </div>
                                 </div>
@@ -826,15 +854,18 @@
                                         </div>
                                         <div>
                                             <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
-                                                <span>AI Synthesis Insights (Coming Soon)</span>
-                                                <span class="badge-coming-soon">Coming Soon</span>
+                                                <span>AI Synthesis Insights & Grounded Q&A</span>
+                                                <span class="badge badge-active">Active</span>
                                             </div>
                                             <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                                                AI Research Agent will automatically generate site summaries, sentiment analysis, and vector embeddings for RAG pipelines.
+                                                Ask grounded questions, generate executive structural summaries, and explore key website insights.
                                             </div>
                                         </div>
                                     </div>
-                                    <a href="#ai-workspace" class="btn btn-outline btn-sm">Learn More</a>
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="window.analyzeCurrentCrawlWithAi(window.currentAnalysisJobId, window.currentAnalysisBatchId);">
+                                        <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
+                                        <span>Analyze with AI ✨</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -856,7 +887,7 @@
                                         <!-- ENTRY METHOD TABS -->
                                         <div class="form-field" style="margin-bottom: 16px;">
                                             <label class="form-label">Target Website Seed URLs *</label>
-                                            <textarea id="batch-urls-textarea" class="textarea-control" rows="5" placeholder="https://site1.com&#10;https://site2.com&#10;https://site3.com" style="margin-bottom: 10px;">https://news.ycombinator.com&#10;https://docs.python.org/3/&#10;https://cloudflare.com&#10;https://github.com</textarea>
+                                            <textarea id="batch-urls-textarea" class="textarea-control" rows="5" placeholder="https://site1.com&#10;https://site2.com&#10;https://site3.com" style="margin-bottom: 10px;"></textarea>
                                         </div>
 
                                         <!-- DROPZONE & FILE UPLOAD -->
@@ -1256,7 +1287,7 @@
                                             <span class="badge badge-success">SUCCESS</span>
                                         </div>
                                         <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
-                                            <a href="https://news.ycombinator.com" target="_blank" id="analysis-target-url" style="color: var(--text-secondary); text-decoration: underline;">https://news.ycombinator.com</a> •
+                                            <a href="https://news.ycombinator.com" target="_blank" id="analysis-target-url" style="color: var(--text-secondary); text-decoration: underline; word-break: break-all; overflow-wrap: anywhere;">https://news.ycombinator.com</a> •
                                             <span>Duration: <strong style="font-family: var(--font-mono);">1.45s</strong></span> •
                                             <span>Generated: <strong>Just now</strong></span>
                                         </div>
@@ -1314,7 +1345,7 @@
 
                         <!-- TAB 1: OVERVIEW -->
                         <div id="analysis-tab-overview" class="analysis-tab-pane">
-                            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+                            <div style="display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 24px;">
                                 <div style="display: flex; flex-direction: column; gap: 20px;">
                                     <!-- EXECUTIVE SUMMARY CARD -->
                                     <div class="card" style="padding: 20px;">
@@ -1536,20 +1567,22 @@
                                     <span>Extracted Links Directory (312 Total)</span>
                                     <input type="text" class="input-text" placeholder="Search links..." style="width: 220px;">
                                 </div>
-                                <table class="table-container" style="font-size: 12px;">
-                                    <thead>
-                                        <tr style="border-bottom: 1px solid var(--border-default);">
-                                            <th style="padding: 8px; text-align: left;">Anchor Text</th>
-                                            <th style="padding: 8px; text-align: left;">Target URL</th>
-                                            <th style="padding: 8px; text-align: left;">Type</th>
-                                            <th style="padding: 8px; text-align: left;">HTTP Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr><td style="padding: 8px; font-weight: 500;">Submit</td><td style="padding: 8px; color: var(--text-muted);">https://news.ycombinator.com/submit</td><td style="padding: 8px;"><span class="badge badge-info">Internal</span></td><td style="padding: 8px;"><span class="badge badge-success">200 OK</span></td></tr>
-                                        <tr><td style="padding: 8px; font-weight: 500;">Python 3.13 Notes</td><td style="padding: 8px; color: var(--text-muted);">https://docs.python.org/3/whatsnew/3.13.html</td><td style="padding: 8px;"><span class="badge badge-neutral">External</span></td><td style="padding: 8px;"><span class="badge badge-success">200 OK</span></td></tr>
-                                    </tbody>
-                                </table>
+                                <div class="table-responsive">
+                                    <table class="table-container" style="font-size: 12px;">
+                                        <thead>
+                                            <tr style="border-bottom: 1px solid var(--border-default);">
+                                                <th style="padding: 8px; text-align: left;">Anchor Text</th>
+                                                <th style="padding: 8px; text-align: left;">Target URL</th>
+                                                <th style="padding: 8px; text-align: left;">Type</th>
+                                                <th style="padding: 8px; text-align: left;">HTTP Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr><td style="padding: 8px; font-weight: 500;">Submit</td><td style="padding: 8px; color: var(--text-muted);">https://news.ycombinator.com/submit</td><td style="padding: 8px;"><span class="badge badge-info">Internal</span></td><td style="padding: 8px;"><span class="badge badge-success">200 OK</span></td></tr>
+                                            <tr><td style="padding: 8px; font-weight: 500;">Python 3.13 Notes</td><td style="padding: 8px; color: var(--text-muted);">https://docs.python.org/3/whatsnew/3.13.html</td><td style="padding: 8px;"><span class="badge badge-neutral">External</span></td><td style="padding: 8px;"><span class="badge badge-success">200 OK</span></td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
 
@@ -1649,36 +1682,66 @@
                             </div>
                         </div>
 
-                        <!-- TAB 9: AI INSIGHTS (COMING SOON) -->
+                        <!-- TAB 9: AI INSIGHTS HUB -->
                         <div id="analysis-tab-ai" class="analysis-tab-pane" style="display: none;">
-                            <div class="card" style="border: 1px dashed var(--border-strong); padding: 24px; background-color: var(--bg-hover);">
-                                <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px;">
-                                    <div style="width: 44px; height: 44px; border-radius: 10px; background-color: var(--accent-light); color: var(--accent-primary); display: flex; align-items: center; justify-content: center;">
-                                        <i data-lucide="sparkles" style="width: 22px; height: 22px;"></i>
+                            <div class="card" style="border: 1px solid var(--border-subtle); padding: 24px; background-color: var(--bg-card);">
+                                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-subtle);">
+                                    <div style="display: flex; align-items: center; gap: 14px;">
+                                        <div style="width: 44px; height: 44px; border-radius: 10px; background-color: var(--accent-light); color: var(--accent-primary); display: flex; align-items: center; justify-content: center;">
+                                            <i data-lucide="sparkles" style="width: 22px; height: 22px;"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                                                <span>AI Intelligence Insights & Grounded Q&A</span>
+                                                <span id="ai-execution-badge" class="badge-status badge-active" style="font-size: 11px;">Direct AI Ready</span>
+                                            </div>
+                                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                                                Synthesize website summaries, extract major topics, and ask grounded questions over crawled datasets.
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
-                                            <span>AI Intelligence Insights Hub</span>
-                                            <span class="badge-coming-soon">Coming Soon</span>
-                                        </div>
-                                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                                            Autonomous AI agents will synthesize web intelligence directly from your extracted datasets.
-                                        </div>
+                                    <div style="display: flex; gap: 10px;">
+                                        <button type="button" id="btn-generate-ai-analysis" class="btn btn-primary btn-md" onclick="window.runAiAnalysis();">
+                                            <i data-lucide="sparkles" style="width: 15px; height: 15px;"></i>
+                                            <span>Generate AI Summary</span>
+                                        </button>
+                                        <button type="button" id="btn-prepare-rag" class="btn btn-outline btn-md" onclick="window.runPrepareRag();">
+                                            <i data-lucide="layers" style="width: 15px; height: 15px;"></i>
+                                            <span>Index RAG Embeddings</span>
+                                        </button>
                                     </div>
                                 </div>
 
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
-                                    <div class="card" style="padding: 16px;">
-                                        <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">Research Agent</div>
-                                        <div style="font-size: 12px; color: var(--text-muted);">Generates domain summaries, market positioning, and key takeaways.</div>
+                                <!-- AI Executive Analysis Output Card -->
+                                <div id="ai-analysis-container" style="margin-bottom: 24px; display: none;">
+                                    <div class="card" style="background-color: var(--bg-card-secondary); padding: 20px; border: 1px solid var(--border-subtle); border-radius: 8px;">
+                                        <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                            <i data-lucide="file-text" style="width: 16px; height: 16px; color: var(--accent-primary);"></i>
+                                            <span>Executive Summary & Structural Analysis</span>
+                                        </div>
+                                        <div id="ai-analysis-output" style="font-size: 13px; line-height: 1.6; color: var(--text-secondary); white-space: pre-line;"></div>
+                                        <div id="ai-analysis-sources" style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border-subtle); font-size: 12px; color: var(--text-muted);"></div>
                                     </div>
-                                    <div class="card" style="padding: 16px;">
-                                        <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">Documentation Agent</div>
-                                        <div style="font-size: 12px; color: var(--text-muted);">Synthesizes extracted API routes and technical docs into markdown.</div>
+                                </div>
+
+                                <!-- Grounded Q&A Interface -->
+                                <div class="card" style="padding: 20px; border: 1px solid var(--border-subtle);">
+                                    <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;">
+                                        Ask Grounded AI Questions
                                     </div>
-                                    <div class="card" style="padding: 16px;">
-                                        <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">Knowledge Agent</div>
-                                        <div style="font-size: 12px; color: var(--text-muted);">Creates RAG vector embeddings for instant semantic search.</div>
+                                    <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                                        <input type="text" id="ai-question-input" class="form-control" placeholder="Ask a question about this website (e.g. What products or documentation are listed?)" style="flex: 1;" onkeypress="if(event.key==='Enter') window.runAiQuery();">
+                                        <button type="button" id="btn-ask-ai" class="btn btn-primary btn-md" onclick="window.runAiQuery();">
+                                            <i data-lucide="send" style="width: 15px; height: 15px;"></i>
+                                            <span>Ask AI</span>
+                                        </button>
+                                    </div>
+                                    <div id="ai-query-container" style="display: none;">
+                                        <div class="card" style="background-color: var(--bg-hover); padding: 16px; border-radius: 6px;">
+                                            <div style="font-size: 12px; font-weight: 600; color: var(--accent-primary); margin-bottom: 6px;">Grounded AI Answer:</div>
+                                            <div id="ai-query-answer" style="font-size: 13px; line-height: 1.5; color: var(--text-primary); white-space: pre-line;"></div>
+                                            <div id="ai-query-sources" style="margin-top: 10px; font-size: 11px; color: var(--text-muted);"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -2364,6 +2427,92 @@
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VIEW 7: AI WORKSPACE CONTAINER -->
+                    <div id="view-ai-workspace" class="page-view">
+                        <div class="page-header-block" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                            <div>
+                                <h1 class="page-title" style="display: flex; align-items: center; gap: 10px;">
+                                    <i data-lucide="sparkles" style="color: var(--accent-primary);"></i>
+                                    <span>AI Intelligence Assistant</span>
+                                </h1>
+                                <p class="page-subtitle">Talk directly to your crawled website data. Ask questions naturally, explore executive summaries, and inspect grounded source citations.</p>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <button type="button" class="btn btn-primary btn-md" onclick="window.runAiAnalysis();">
+                                    <i data-lucide="sparkles" style="width: 15px; height: 15px;"></i>
+                                    <span>Generate AI Summary ✨</span>
+                                </button>
+                                <button type="button" id="btn-prepare-rag" class="btn btn-outline btn-md" onclick="window.runPrepareRag();" title="Pre-index semantic RAG vector embeddings manually (Normal questions perform RAG indexing automatically on demand)">
+                                    <i data-lucide="layers" style="width: 15px; height: 15px;"></i>
+                                    <span>Index Embeddings</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- ACTIVE WORKSPACE DATASET CONTEXT CARD -->
+                        <div class="card" style="margin-bottom: 24px; padding: 20px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                                <div style="flex: 1; min-width: 280px;">
+                                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent-primary); margin-bottom: 4px;">Active Crawl Context</div>
+                                    <div id="ai-workspace-context-target" style="font-size: 16px; font-weight: 700; color: var(--text-primary);">No active crawl job loaded</div>
+                                    <div id="ai-workspace-context-id" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Select a completed crawl from history or run a single crawl.</div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                    <div id="ai-workspace-job-selector-container">
+                                        <select id="ai-workspace-job-selector" class="select-control" style="min-width: 240px; font-size: 13px;" onchange="window.selectAiWorkspaceJob(this.value);">
+                                            <option value="">-- Select a completed crawl --</option>
+                                        </select>
+                                    </div>
+                                    <button type="button" class="btn btn-outline btn-sm" onclick="window.location.hash='single-crawl';">
+                                        <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+                                        <span>New Crawl</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI EXECUTIVE SUMMARY OUTPUT CONTAINER -->
+                        <div id="ai-workspace-analysis-container" class="card" style="margin-bottom: 24px; padding: 24px; display: none;">
+                            <div style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                                <i data-lucide="file-text" style="width: 18px; height: 18px; color: var(--accent-primary);"></i>
+                                <span>Executive Summary & Structural Analysis</span>
+                            </div>
+                            <div id="ai-workspace-analysis-output" style="font-size: 13px; line-height: 1.6; color: var(--text-secondary); white-space: pre-line;"></div>
+                            <div id="ai-workspace-analysis-sources" style="margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border-subtle); font-size: 12px; color: var(--text-muted);"></div>
+                        </div>
+
+                        <!-- CONVERSATIONAL GROUNDED AI CHAT INTERFACE CARD -->
+                        <div id="ai-workspace-chat-card" class="card" style="padding: 24px; margin-bottom: 24px; display: flex; flex-direction: column; min-height: 480px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle);">
+                                <div>
+                                    <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                                        <i data-lucide="messages-square" style="width: 18px; height: 18px; color: var(--accent-primary);"></i>
+                                        <span>Conversational AI Assistant</span>
+                                    </div>
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Ask multiple questions about this website. Multi-turn context is preserved during your session.</div>
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-xs" onclick="if(window.currentAnalysisJobId||window.currentAnalysisBatchId){ delete window.aiConversations[window.currentAnalysisJobId||window.currentAnalysisBatchId]; window.renderAiChatMessages(); }">
+                                    <i data-lucide="rotate-ccw" style="width: 12px; height: 12px;"></i>
+                                    <span>Clear Chat</span>
+                                </button>
+                            </div>
+                            
+                            <!-- SCROLLABLE MESSAGES CONTAINER -->
+                            <div id="ai-chat-messages" style="flex: 1; overflow-y: auto; max-height: 440px; min-height: 280px; padding-right: 8px; margin-bottom: 16px;">
+                                <!-- Rendered dynamically by window.renderAiChatMessages() -->
+                            </div>
+
+                            <!-- BOTTOM INPUT BAR -->
+                            <div id="ai-chat-input-bar" style="display: flex; gap: 10px; align-items: flex-end; padding-top: 12px; border-top: 1px solid var(--border-subtle);">
+                                <textarea id="ai-chat-input" class="form-control" rows="2" placeholder="Ask anything about this website... (Press Enter to send, Shift+Enter for newline)" style="flex: 1; resize: none; font-size: 14px;" onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); window.sendAiChatMessage(); }"></textarea>
+                                <button type="button" id="btn-ai-chat-send" class="btn btn-primary btn-md" style="height: 48px; padding: 0 20px; display: flex; align-items: center; gap: 8px;" onclick="window.sendAiChatMessage();">
+                                    <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
+                                    <span>Send</span>
+                                </button>
                             </div>
                         </div>
                     </div>

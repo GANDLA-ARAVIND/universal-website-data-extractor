@@ -112,5 +112,12 @@ window.API = (function () {
             dataset: (batchId) => request(`/batch/${batchId}/dataset`, { method: 'GET' }),
             export: (batchId, format = 'json') => request(`/batch/${batchId}/export`, { method: 'POST', body: { format }, responseType: 'blob' }),
         },
+        ai: {
+            analyzeCrawl: (jobId) => request(`/ai/crawl/${jobId}/analyze`, { method: 'POST' }),
+            queryCrawl: (jobId, question, history = []) => request(`/ai/crawl/${jobId}/query`, { method: 'POST', body: { question, history } }),
+            prepareRag: (jobId) => request(`/ai/crawl/${jobId}/prepare-rag`, { method: 'POST' }),
+            analyzeBatch: (batchId) => request(`/ai/batch/${batchId}/analyze`, { method: 'POST' }),
+            queryBatch: (batchId, question, history = []) => request(`/ai/batch/${batchId}/query`, { method: 'POST', body: { question, history } }),
+        },
     };
 })();

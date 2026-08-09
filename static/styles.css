@@ -310,17 +310,24 @@ button {
 .main-canvas {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 28px 32px;
   background-color: var(--bg-app);
+  width: 100%;
+  min-width: 0;
 }
 
 .canvas-container {
   max-width: 1320px;
+  width: 100%;
+  min-width: 0;
   margin: 0 auto;
 }
 
 .page-view {
   display: none;
+  width: 100%;
+  min-width: 0;
 }
 
 .page-view.active {
@@ -501,6 +508,7 @@ button {
   max-width: 380px;
   width: calc(100vw - 40px);
   pointer-events: none;
+  overflow: hidden;
 }
 
 .toast-item {
@@ -526,6 +534,7 @@ button {
 .toast-item.hide {
   transform: translateX(120%);
   opacity: 0;
+  display: none !important;
 }
 
 .toast-icon {
@@ -1160,9 +1169,11 @@ button {
 /* Master-Detail Split Layout Styles */
 .master-detail-container {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
   gap: 20px;
   height: 620px;
+  width: 100%;
+  min-width: 0;
 }
 @media (max-width: 992px) {
   .master-detail-container {
@@ -1175,11 +1186,17 @@ button {
   padding-right: 16px;
   overflow-y: auto;
   max-height: 600px;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 .detail-view-panel {
   overflow-y: auto;
   max-height: 600px;
   padding-left: 4px;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Settings Workspace Styles */
@@ -1217,6 +1234,65 @@ button {
   background-color: var(--accent-light);
   color: var(--accent-primary);
   font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   Website Analysis & Layout Overflow Safeguards
+   -------------------------------------------------------------------------- */
+.table-responsive {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
+
+.table-container {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.table-container td, .table-container th {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 400px;
+}
+
+code {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+pre, .console-box {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+.sticky-tabs-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--bg-app);
+  padding-top: 8px;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-default);
+  max-width: 100%;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.analysis-tab-pane {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 

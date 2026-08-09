@@ -88,6 +88,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             canvas.scrollTop = 0;
         }
 
+        // Clear Polling Intervals on Navigation
+        if (viewId !== 'single-crawl' && singleCrawlPollInterval) {
+            clearInterval(singleCrawlPollInterval);
+            singleCrawlPollInterval = null;
+        }
+        if (viewId !== 'batch-crawl' && batchCrawlPollInterval) {
+            clearInterval(batchCrawlPollInterval);
+            batchCrawlPollInterval = null;
+        }
+
         // View-Specific Initializers
         if (viewId === 'dashboard') {
             await window.loadDashboardData();
@@ -97,6 +107,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             await window.loadAnalysisWorkspace(window.currentAnalysisJobId, window.currentAnalysisBatchId);
         } else if (viewId === 'settings') {
             window.loadSettingsView();
+        } else if (viewId === 'ai-workspace') {
+            await window.loadAiWorkspaceView();
         }
 
         if (window.lucide) window.lucide.createIcons();
@@ -828,21 +840,28 @@ window.loadAnalysisWorkspace = async function (jobId, batchId) {
             job = await API.crawl.get(targetJobId);
         } else if (targetBatchId) {
             const bDataset = await API.batch.dataset(targetBatchId);
-            dataset = bDataset.websites && bDataset.websites.length > 0 ? bDataset.websites[0] : null;
+            dataset = bDataset.websites && bDataset.websites.length > 0 && bDataset.websites[0].dataset ? bDataset.websites[0].dataset : null;
             job = await API.batch.get(targetBatchId);
         }
 
         if (!dataset) return;
+
+        const websiteInfo = dataset.website_info || {};
+        const seedUrl = websiteInfo.seed_url || dataset.seed_url || '';
+        let domainName = websiteInfo.domain || '';
+        if (!domainName && seedUrl) {
+            try { domainName = new URL(seedUrl).hostname; } catch (e) { domainName = seedUrl; }
+        }
 
         // Render Header Metadata
         const siteNameEl = document.getElementById('analysis-site-name');
         const targetUrlEl = document.getElementById('analysis-target-url');
         const jsonCodeEl = document.getElementById('analysis-json-code');
 
-        if (siteNameEl) siteNameEl.textContent = dataset.site_name || new URL(dataset.seed_url).hostname;
-        if (targetUrlEl) {
-            targetUrlEl.textContent = dataset.seed_url;
-            targetUrlEl.href = dataset.seed_url;
+        if (siteNameEl) siteNameEl.textContent = domainName || 'Website Analysis';
+        if (targetUrlEl && seedUrl) {
+            targetUrlEl.textContent = seedUrl;
+            targetUrlEl.href = seedUrl;
         }
 
         if (jsonCodeEl) {
@@ -850,11 +869,12 @@ window.loadAnalysisWorkspace = async function (jobId, batchId) {
         }
 
         // Overview tab stats
-        const stats = dataset.stats || {};
+        const stats = dataset.statistics || dataset.stats || {};
+        const summary = dataset.summary || {};
         const pages = dataset.pages || [];
 
         const statPagesEl = document.querySelector('#analysis-tab-overview .card-stat-val');
-        if (statPagesEl) statPagesEl.textContent = stats.total_pages || pages.length;
+        if (statPagesEl) statPagesEl.textContent = stats.pages_crawled || pages.length;
 
         // Bind Export Download Buttons inside Analysis
         const btnHeaderPdf = document.querySelector('#view-analysis button[onclick*="ycombinator_report.pdf"]');
@@ -878,8 +898,8 @@ window.loadAnalysisWorkspace = async function (jobId, batchId) {
                 node.style.cursor = 'pointer';
 
                 node.innerHTML = `
-                    <div style="font-weight: 600; color: var(--text-primary);">${p.title || 'Untitled Page'}</div>
-                    <div style="font-size: 11px; color: var(--text-muted);">${p.url}</div>
+                    <div style="font-weight: 600; color: var(--text-primary); word-break: break-word; overflow-wrap: break-word;">${p.title || 'Untitled Page'}</div>
+                    <div style="font-size: 11px; color: var(--text-muted); word-break: break-all; overflow-wrap: anywhere;">${p.url}</div>
                     <div style="display: flex; gap: 6px; margin-top: 4px;">
                         <span class="badge badge-success">${p.status_code || 200} OK</span>
                         <span class="badge badge-neutral">Depth ${p.depth || 1}</span>
@@ -915,7 +935,7 @@ window.renderPageDetailPanel = function (page) {
     for (const [tag, items] of Object.entries(headings)) {
         if (Array.isArray(items)) {
             items.forEach(h => {
-                headingsHTML += `<div><strong>${tag.toUpperCase()}:</strong> ${h}</div>`;
+                headingsHTML += `<div style="word-break: break-word; overflow-wrap: break-word;"><strong>${tag.toUpperCase()}:</strong> ${h}</div>`;
             });
         }
     }
@@ -924,19 +944,19 @@ window.renderPageDetailPanel = function (page) {
     const textSnippet = paragraphs.slice(0, 3).join(' ');
 
     detailPanel.innerHTML = `
-        <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">${page.title || 'Extracted Page'}</div>
-        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">URL: <code>${page.url}</code></div>
+        <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; word-break: break-word; overflow-wrap: break-word;">${page.title || 'Extracted Page'}</div>
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px; word-break: break-all; overflow-wrap: anywhere;">URL: <code style="word-break: break-all; overflow-wrap: anywhere;">${page.url}</code></div>
 
         <div style="margin-bottom: 20px;">
             <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">Extracted Headings (H1-H6)</div>
-            <div style="background-color: var(--bg-app); padding: 12px; border-radius: 6px; font-size: 12px; line-height: 1.6;">
+            <div style="background-color: var(--bg-app); padding: 12px; border-radius: 6px; font-size: 12px; line-height: 1.6; word-break: break-word; overflow-wrap: break-word;">
                 ${headingsHTML || '<em>No heading tags extracted from this page.</em>'}
             </div>
         </div>
 
         <div>
             <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">Clean Text Paragraph Snippet</div>
-            <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.6; background-color: var(--bg-app); padding: 12px; border-radius: 6px;">
+            <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.6; background-color: var(--bg-app); padding: 12px; border-radius: 6px; word-break: break-word; overflow-wrap: break-word;">
                 ${textSnippet || '<em>No body text paragraphs extracted.</em>'}
             </p>
         </div>
@@ -1053,6 +1073,9 @@ window.loadHistoryData = async function () {
                         </div>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <span class="badge ${statusClass}">${job.status}</span>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="window.analyzeCurrentCrawlWithAi('${job.id}')">
+                                <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i> Analyze with AI ✨
+                            </button>
                             <button type="button" class="btn btn-secondary btn-sm" onclick="window.openAnalysisForJob('${job.id}')">
                                 <i data-lucide="bar-chart-2" style="width: 14px; height: 14px;"></i> Open Analysis
                             </button>
@@ -1296,4 +1319,350 @@ window.createErrorState = function ({ icon = 'alert-triangle', title = 'An Error
     }
 
     return card;
+};
+
+// --------------------------------------------------------------------------
+// AI Intelligence Insights Hub Handlers
+// --------------------------------------------------------------------------
+window.runAiAnalysis = async function () {
+    const jobId = window.currentAnalysisJobId;
+    if (!jobId) {
+        window.showToast({ type: 'warning', title: 'No Crawl Job Loaded', message: 'Please select or run a crawl job first.' });
+        return;
+    }
+
+    const btn = document.getElementById('btn-generate-ai-analysis');
+    const container = document.getElementById('ai-analysis-container');
+    const output = document.getElementById('ai-analysis-output');
+    const sources = document.getElementById('ai-analysis-sources');
+    const badge = document.getElementById('ai-execution-badge');
+
+    if (btn) btn.disabled = true;
+    if (container) container.style.display = 'block';
+    if (output) output.innerHTML = '<em>Generating AI Executive Summary & Major Topics...</em>';
+    if (sources) sources.innerHTML = '';
+
+    try {
+        const res = await API.ai.analyzeCrawl(jobId);
+        if (badge) badge.innerText = `${res.execution_path} Mode`;
+        if (output) output.innerText = res.analysis || 'No analysis text returned.';
+
+        if (sources && res.sources && res.sources.length > 0) {
+            sources.innerHTML = '<strong>Grounding Sources:</strong> ' + res.sources.map(s => `<a href="${s.url}" target="_blank" style="color: var(--accent-primary); text-decoration: underline; margin-right: 12px;">${s.page_title || s.url}</a>`).join('');
+        }
+        window.showToast({ type: 'success', title: 'AI Analysis Complete', message: `Dataset analyzed using ${res.execution_path} strategy.` });
+    } catch (err) {
+        console.error('Failed to run AI analysis:', err);
+        if (output) output.innerText = `Failed to generate AI analysis: ${err.message}`;
+        window.showToast({ type: 'error', title: 'AI Analysis Failed', message: err.message });
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+};
+
+window.runPrepareRag = async function () {
+    const jobId = window.currentAnalysisJobId;
+    if (!jobId) {
+        window.showToast({ type: 'warning', title: 'No Crawl Job Loaded', message: 'Please select or run a crawl job first.' });
+        return;
+    }
+
+    const btn = document.getElementById('btn-prepare-rag');
+    if (btn) btn.disabled = true;
+
+    window.showToast({ type: 'info', title: 'Indexing RAG Embeddings', message: 'Generating semantic chunks & vector embeddings...' });
+
+    try {
+        const res = await API.ai.prepareRag(jobId);
+        window.showToast({ type: 'success', title: 'RAG Indexing Complete', message: `Indexed ${res.chunks_indexed} document chunks into vector store.` });
+    } catch (err) {
+        console.error('Failed to index RAG embeddings:', err);
+        window.showToast({ type: 'error', title: 'RAG Indexing Failed', message: err.message });
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+};
+
+window.runAiQuery = async function () {
+    const jobId = window.currentAnalysisJobId;
+    if (!jobId) {
+        window.showToast({ type: 'warning', title: 'No Crawl Job Loaded', message: 'Please select or run a crawl job first.' });
+        return;
+    }
+
+    const input = document.getElementById('ai-question-input');
+    const question = input ? input.value.trim() : '';
+
+    if (!question) {
+        window.showToast({ type: 'warning', title: 'Empty Question', message: 'Please enter a question.' });
+        return;
+    }
+
+    const btn = document.getElementById('btn-ask-ai');
+    const container = document.getElementById('ai-query-container');
+    const answer = document.getElementById('ai-query-answer');
+    const sources = document.getElementById('ai-query-sources');
+
+    if (btn) btn.disabled = true;
+    if (container) container.style.display = 'block';
+    if (answer) answer.innerHTML = '<em>Searching dataset context and synthesizing grounded answer...</em>';
+    if (sources) sources.innerHTML = '';
+
+    try {
+        const res = await API.ai.queryCrawl(jobId, question);
+        if (answer) answer.innerText = res.answer || 'No answer generated.';
+
+        if (sources && res.sources && res.sources.length > 0) {
+            sources.innerHTML = '<strong>Grounding Sources:</strong> ' + res.sources.map(s => `<a href="${s.url}" target="_blank" style="color: var(--accent-primary); text-decoration: underline; margin-right: 10px;">${s.page_title || s.url} ${s.heading ? `(${s.heading})` : ''}</a>`).join('');
+        }
+        window.showToast({ type: 'success', title: 'Answer Synthesized', message: `Grounded in dataset (${res.execution_path})` });
+    } catch (err) {
+        console.error('Failed to query AI:', err);
+        if (answer) answer.innerText = `Failed to get AI answer: ${err.message}`;
+        window.showToast({ type: 'error', title: 'AI Query Failed', message: err.message });
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+};
+
+window.aiConversations = {};
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+window.analyzeCurrentCrawlWithAi = function(jobId, batchId = null) {
+    if (jobId) window.currentAnalysisJobId = jobId;
+    if (batchId) window.currentAnalysisBatchId = batchId;
+    window.location.hash = 'ai-workspace';
+};
+
+window.selectAiWorkspaceJob = function(jobId) {
+    if (!jobId) return;
+    window.currentAnalysisJobId = jobId;
+    window.currentAnalysisBatchId = null;
+    window.loadAiWorkspaceView();
+};
+
+window.loadAiWorkspaceView = async function () {
+    const targetEl = document.getElementById('ai-workspace-context-target');
+    const idEl = document.getElementById('ai-workspace-context-id');
+    const selectorContainer = document.getElementById('ai-workspace-job-selector-container');
+    const selector = document.getElementById('ai-workspace-job-selector');
+    
+    // Populate job selector dropdown from recent completed crawl history if available
+    try {
+        const historyRes = await API.crawl.list({ page: 1, pageSize: 20, status: 'COMPLETED' });
+        if (selector && historyRes && historyRes.items) {
+            selector.innerHTML = '<option value="">-- Select a completed crawl --</option>' +
+                historyRes.items.map(j => `<option value="${j.id}" ${j.id === window.currentAnalysisJobId ? 'selected' : ''}>${escapeHtml(j.seed_url)} (${new Date(j.created_at).toLocaleTimeString()})</option>`).join('');
+            if (selectorContainer) selectorContainer.style.display = 'block';
+        }
+    } catch(e) {
+        console.warn('Could not load history for AI job selector', e);
+    }
+
+    const jobId = window.currentAnalysisJobId;
+    const batchId = window.currentAnalysisBatchId;
+
+    if (!jobId && !batchId) {
+        if (targetEl) targetEl.textContent = 'No active crawl job loaded';
+        if (idEl) idEl.textContent = 'Select a completed crawl from the dropdown above or run a new crawl.';
+        window.renderAiChatMessages();
+        return;
+    }
+
+    if (batchId && !jobId) {
+        if (targetEl) targetEl.textContent = `Batch Job #${batchId.substring(0, 8)}`;
+        if (idEl) idEl.textContent = `Multi-Website Batch Dataset`;
+        window.renderAiChatMessages();
+        return;
+    }
+
+    try {
+        const job = await API.crawl.get(jobId);
+        if (targetEl) targetEl.textContent = job.seed_url;
+        if (idEl) idEl.textContent = `Job ID: ${job.id} | Status: ${job.status} | Mode: ${job.crawl_mode}`;
+        if (selector && jobId) selector.value = jobId;
+    } catch (err) {
+        if (targetEl) targetEl.textContent = `Job ID: ${jobId.substring(0, 8)}...`;
+        if (idEl) idEl.textContent = 'Active Crawl Context';
+    }
+
+    window.renderAiChatMessages();
+};
+
+window.renderAiChatMessages = function() {
+    const container = document.getElementById('ai-chat-messages');
+    if (!container) return;
+
+    const contextId = window.currentAnalysisJobId || window.currentAnalysisBatchId || 'global';
+    const history = window.aiConversations[contextId] || [];
+
+    if (history.length === 0) {
+        const seedUrl = document.getElementById('ai-workspace-context-target')?.textContent || 'this website';
+        container.innerHTML = `
+            <div style="text-align: center; padding: 32px 16px; background-color: var(--bg-hover); border-radius: 12px; border: 1px dashed var(--border-subtle);">
+                <div style="width: 48px; height: 48px; border-radius: 50%; background-color: var(--accent-light); color: var(--accent-primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                    <i data-lucide="sparkles" style="width: 24px; height: 24px;"></i>
+                </div>
+                <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">Ask AI Assistant</div>
+                <div style="font-size: 13px; color: var(--text-muted); max-width: 480px; margin: 0 auto 18px;">
+                    Ask questions naturally about <strong>${escapeHtml(seedUrl)}</strong>. Answers are strictly grounded in extracted website content.
+                </div>
+                <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 10px;">Suggested Questions:</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;" id="ai-chat-suggested-chips">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="window.sendAiChatMessage('What is this website about?');">What is this website about?</button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="window.sendAiChatMessage('What are the main sections and topics?');">What are the main sections?</button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="window.sendAiChatMessage('Summarize key information found.');">Summarize key information</button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="window.sendAiChatMessage('List key resources or links.');">List key resources</button>
+                </div>
+            </div>
+        `;
+        if (window.lucide) window.lucide.createIcons();
+        return;
+    }
+
+    container.innerHTML = history.map(msg => {
+        if (msg.role === 'user') {
+            return `
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
+                    <div style="max-width: 80%; background: linear-gradient(135deg, var(--accent-primary), #2563eb); color: #ffffff; padding: 12px 16px; border-radius: 16px 16px 2px 16px; font-size: 14px; line-height: 1.5; box-shadow: var(--shadow-sm);">
+                        ${escapeHtml(msg.text)}
+                    </div>
+                </div>
+            `;
+        } else {
+            const sourcesHtml = (msg.sources && msg.sources.length > 0)
+                ? `<div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-subtle); font-size: 12px; color: var(--text-muted);">
+                    <strong>Grounding Sources:</strong><br>
+                    ${msg.sources.map(s => `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener" style="color: var(--accent-primary); text-decoration: underline; margin-right: 12px; display: inline-block; margin-top: 4px;">• ${escapeHtml(s.page_title || s.url)} ${s.heading ? `(${escapeHtml(s.heading)})` : ''}</a>`).join('')}
+                   </div>`
+                : '';
+
+            const modeBadge = msg.executionPath
+                ? `<span class="badge badge-subtle font-mono" style="font-size: 10px; margin-bottom: 8px; display: inline-block;">Mode: ${escapeHtml(msg.executionPath)} ${msg.retrievedCount ? `(Retrieved ${msg.retrievedCount} sections)` : ''}</span>`
+                : '';
+
+            return `
+                <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                    <div style="width: 34px; height: 34px; border-radius: 50%; background-color: var(--accent-light); color: var(--accent-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
+                        <i data-lucide="sparkles" style="width: 18px; height: 18px;"></i>
+                    </div>
+                    <div style="max-width: 85%; background-color: var(--bg-hover); border: 1px solid var(--border-subtle); padding: 14px 18px; border-radius: 2px 16px 16px 16px; font-size: 14px; line-height: 1.6; color: var(--text-primary); box-shadow: var(--shadow-sm);">
+                        ${modeBadge}
+                        <div style="white-space: pre-line;">${escapeHtml(msg.text)}</div>
+                        ${sourcesHtml}
+                    </div>
+                </div>
+            `;
+        }
+    }).join('');
+
+    container.scrollTop = container.scrollHeight;
+    if (window.lucide) window.lucide.createIcons();
+};
+
+window.sendAiChatMessage = async function(questionOverride = null) {
+    const input = document.getElementById('ai-chat-input');
+    const question = (questionOverride || (input ? input.value : '')).trim();
+    if (!question) {
+        window.showToast({ type: 'warning', title: 'Empty Question', message: 'Please enter a question.' });
+        return;
+    }
+
+    const jobId = window.currentAnalysisJobId;
+    const batchId = window.currentAnalysisBatchId;
+
+    if (!jobId && !batchId) {
+        window.showToast({ type: 'warning', title: 'No Crawl Loaded', message: 'Please select a completed crawl first.' });
+        return;
+    }
+
+    const contextId = jobId || batchId;
+    if (!window.aiConversations[contextId]) {
+        window.aiConversations[contextId] = [];
+    }
+
+    // Append user message
+    window.aiConversations[contextId].push({ role: 'user', text: question });
+    if (input) input.value = '';
+    window.renderAiChatMessages();
+
+    // Disable input controls & show thinking state
+    const btn = document.getElementById('btn-ai-chat-send');
+    if (btn) btn.disabled = true;
+    if (input) input.disabled = true;
+
+    // Show temporary thinking bubble
+    const container = document.getElementById('ai-chat-messages');
+    if (container) {
+        const thinkingDiv = document.createElement('div');
+        thinkingDiv.id = 'ai-thinking-indicator';
+        thinkingDiv.style.cssText = 'display: flex; gap: 12px; margin-bottom: 20px;';
+        thinkingDiv.innerHTML = `
+            <div style="width: 34px; height: 34px; border-radius: 50%; background-color: var(--accent-light); color: var(--accent-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i data-lucide="refresh-cw" class="spin" style="width: 18px; height: 18px;"></i>
+            </div>
+            <div style="background-color: var(--bg-hover); border: 1px solid var(--border-subtle); padding: 12px 16px; border-radius: 2px 16px 16px 16px; font-size: 13px; color: var(--text-muted);">
+                AI is thinking and synthesizing grounded answer...
+            </div>
+        `;
+        container.appendChild(thinkingDiv);
+        container.scrollTop = container.scrollHeight;
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    // Build history payload for backend
+    const apiHistory = window.aiConversations[contextId].slice(0, -1).map(m => ({
+        role: m.role,
+        content: m.text
+    }));
+
+    try {
+        let res;
+        if (jobId) {
+            res = await API.ai.queryCrawl(jobId, question, apiHistory);
+        } else {
+            res = await API.ai.queryBatch(batchId, question, apiHistory);
+        }
+
+        const thinkingEl = document.getElementById('ai-thinking-indicator');
+        if (thinkingEl) thinkingEl.remove();
+
+        window.aiConversations[contextId].push({
+            role: 'assistant',
+            text: res.answer || 'No answer returned.',
+            sources: res.sources || [],
+            executionPath: res.execution_path || 'DIRECT_AI',
+            retrievedCount: res.retrieved_chunks_count || 0
+        });
+
+        window.renderAiChatMessages();
+    } catch (err) {
+        const thinkingEl = document.getElementById('ai-thinking-indicator');
+        if (thinkingEl) thinkingEl.remove();
+
+        window.aiConversations[contextId].push({
+            role: 'assistant',
+            text: `Unable to synthesize answer: ${err.message}`,
+            sources: [],
+            executionPath: 'ERROR'
+        });
+
+        window.renderAiChatMessages();
+        window.showToast({ type: 'error', title: 'AI Query Failed', message: err.message });
+    } finally {
+        if (btn) btn.disabled = false;
+        if (input) {
+            input.disabled = false;
+            input.focus();
+        }
+    }
 };
