@@ -58,6 +58,20 @@ class StaticFetcher(BaseFetcher):
                 headers_dict = {k: v for k, v in response.headers.items()}
                 redirect_url = str(response.url) if str(response.url) != url else None
 
+                max_size = getattr(settings, "MAX_RESPONSE_SIZE_BYTES", 10485760)
+                if len(response.content) > max_size:
+                    logger.warning(f"Payload size ({len(response.content)} bytes) for '{url}' exceeded max limit ({max_size} bytes).")
+                    return FetchResult(
+                        url=str(response.url),
+                        status_code=413,
+                        html_content="",
+                        response_time_ms=round(elapsed_ms, 2),
+                        redirect_url=redirect_url,
+                        error_message=f"Payload size exceeded maximum allowed limit of {max_size} bytes.",
+                        warnings=warnings,
+                        headers=headers_dict,
+                    )
+
                 if response.status_code in TRANSIENT_STATUS_CODES and attempt < self.max_retries:
                     warn_msg = f"Attempt {attempt}/{self.max_retries} received status {response.status_code} for {url}. Retrying..."
                     warnings.append(warn_msg)

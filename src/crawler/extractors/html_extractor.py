@@ -57,13 +57,17 @@ class HTMLExtractor:
 
         # 1. Page Title
         title_tag = soup.find("title")
-        if title_tag and title_tag.string:
-            dto.title = title_tag.string.strip()
+        if title_tag:
+            extracted_title = title_tag.get_text(strip=True)
+            if extracted_title:
+                dto.title = extracted_title
 
         # 2. Meta Description
         meta_desc = soup.find("meta", attrs={"name": lambda x: x and x.lower() == "description"})
         if meta_desc and meta_desc.get("content"):
-            dto.meta_description = str(meta_desc.get("content")).strip()
+            extracted_desc = str(meta_desc.get("content")).strip()
+            if extracted_desc:
+                dto.meta_description = extracted_desc
 
         # 3. Headings H1 to H6
         headings_dict: Dict[str, List[str]] = {}

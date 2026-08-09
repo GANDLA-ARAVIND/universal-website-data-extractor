@@ -73,72 +73,76 @@ class CrawlEngine:
         failed_pages = 0
         total_images_count = 0
         total_links_count = 0
+        lock = asyncio.Lock()
+        concurrency_limit = 5
+        semaphore = asyncio.Semaphore(concurrency_limit)
 
-        try:
-            while queue and pages_crawled < self.max_pages:
-                current_url, current_depth = queue.popleft()
+        async def _crawl_single(url: str, depth: int):
+            nonlocal pages_crawled, failed_pages, total_images_count, total_links_count
+            async with semaphore:
                 logger.info(
-                    f"Job {self.job_id} | Crawling [{pages_crawled + 1}/{self.max_pages}] "
-                    f"Depth {current_depth}/{self.max_depth}: {current_url}"
+                    f"Job {self.job_id} | Crawling Depth {depth}/{self.max_depth}: {url}"
                 )
-
                 try:
-                    # Fetch page content
-                    fetch_res = await fetcher.fetch(current_url)
-
+                    fetch_res = await fetcher.fetch(url)
                     if fetch_res.is_success:
-                        # Extract HTML features
                         extracted_dto = self.extractor.parse(
                             html=fetch_res.html_content,
                             page_url=fetch_res.url,
                         )
-
-                        # Merge warnings from fetcher into DTO
                         if fetch_res.warnings:
                             extracted_dto.warnings.extend(fetch_res.warnings)
 
-                        # Save to database
-                        saved_page = await self.page_repo.save_extracted_page(
-                            job_id=self.job_id,
-                            dto=extracted_dto,
-                            depth=current_depth,
-                            status_code=fetch_res.status_code,
-                            response_time_ms=fetch_res.response_time_ms,
-                        )
+                        async with lock:
+                            await self.page_repo.save_extracted_page(
+                                job_id=self.job_id,
+                                dto=extracted_dto,
+                                depth=depth,
+                                status_code=fetch_res.status_code,
+                                response_time_ms=fetch_res.response_time_ms,
+                            )
+                            pages_crawled += 1
+                            total_images_count += len(extracted_dto.images)
+                            total_links_count += len(extracted_dto.internal_links) + len(extracted_dto.external_links)
 
-                        pages_crawled += 1
-                        total_images_count += len(extracted_dto.images)
-                        total_links_count += len(extracted_dto.internal_links) + len(
-                            extracted_dto.external_links
-                        )
-
-                        # Discover and enqueue internal links if depth permits
-                        if current_depth < self.max_depth:
-                            for link_obj in extracted_dto.internal_links:
-                                target = link_obj["target_url"]
-                                target_norm = normalize_url(target)
-
-                                if (
-                                    target_norm not in visited_urls
-                                    and is_same_domain(self.seed_url, target)
-                                    and is_crawlable_html_url(target)
-                                ):
-                                    visited_urls.add(target_norm)
-                                    queue.append((target, current_depth + 1))
+                            if depth < self.max_depth:
+                                for link_obj in extracted_dto.internal_links:
+                                    target = link_obj["target_url"]
+                                    target_norm = normalize_url(target)
+                                    if (
+                                        target_norm not in visited_urls
+                                        and is_same_domain(self.seed_url, target)
+                                        and is_crawlable_html_url(target)
+                                    ):
+                                        visited_urls.add(target_norm)
+                                        queue.append((target, depth + 1))
                     else:
-                        failed_pages += 1
+                        async with lock:
+                            failed_pages += 1
                         logger.warning(
-                            f"Job {self.job_id} | Fetch failed for '{current_url}' "
+                            f"Job {self.job_id} | Fetch failed for '{url}' "
                             f"Status: {fetch_res.status_code} Error: {fetch_res.error_message}"
                         )
                 except Exception as page_exc:
-                    failed_pages += 1
+                    async with lock:
+                        failed_pages += 1
                     logger.error(
-                        f"Job {self.job_id} | Unexpected failure processing page '{current_url}': {page_exc}",
+                        f"Job {self.job_id} | Unexpected failure processing page '{url}': {page_exc}",
                         exc_info=True,
                     )
 
-                # Polite delay between requests
+        try:
+            while queue and pages_crawled < self.max_pages:
+                batch_items = []
+                while queue and len(batch_items) < concurrency_limit and (pages_crawled + len(batch_items)) < self.max_pages:
+                    batch_items.append(queue.popleft())
+
+                if not batch_items:
+                    break
+
+                tasks = [_crawl_single(u, d) for u, d in batch_items]
+                await asyncio.gather(*tasks)
+
                 if self.crawl_delay > 0 and queue:
                     await asyncio.sleep(self.crawl_delay)
 
