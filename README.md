@@ -1,523 +1,411 @@
-# Universal Website Data Extractor
+# Website Intelligence Platform
 
-[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg)](https://fastapi.tiangolo.com/)
-[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0%20Async-red.svg)](https://www.sqlalchemy.org/)
-[![Playwright](https://img.shields.io/badge/Playwright-Headless%20Chromium-green.svg)](https://playwright.dev/python/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-An asynchronous web crawling and structural data extraction engine built with **Python**, **FastAPI**, **Playwright**, **BeautifulSoup4**, **SQLAlchemy 2.0 Async**, **PostgreSQL**, and a zero-framework **Vanilla JavaScript SPA**.
+An enterprise-grade web data extraction, dataset analytics, and conversational AI platform. Automatically extract structured content from any website, generate multi-format dataset exports, and ask natural language questions grounded in your crawled data using RAG (Retrieval-Augmented Generation).
 
 ---
 
-## Executive Overview
+## Overview
 
-The **Universal Website Data Extractor** is a full-stack web scraping platform engineered to traverse web domains, render static and dynamic Single Page Applications (SPAs), extract structural page data (headings, paragraphs, lists, tables, media, internal/external links), and persist datasets into relational storage for multi-format export (**JSON**, **CSV**, **Markdown**).
+Modern web data extraction requires more than raw HTML scraping—it requires converting unstructured web content into clean datasets, structural analytics, downloadable documents, and actionable intelligence.
 
-Built following **Clean Architecture** and **SOLID principles**, the system decouples API request handling, background task orchestration, crawler strategies, feature parsing, and data persistence into distinct, independently testable modules.
+The **Website Intelligence Platform** provides an end-to-end web data workspace:
+
+```
+Website URL → BFS Crawl → Content Extraction → Structural Analytics → Multi-Format Export → Grounded AI Assistant (Direct AI / RAG)
+```
+
+1. **Extraction**: Crawl single websites or batch domain lists with depth control, anti-bot handling, and optional Playwright headless JavaScript rendering.
+2. **Analysis**: Extract headings, paragraphs, page link graphs, image assets, data tables, and metadata across every discovered URL.
+3. **Export**: Stream complete datasets into 6 standard file formats (PDF, DOCX, Markdown, JSON, CSV, XLSX) on demand.
+4. **Grounded AI**: Interact with your website dataset using Google Gemini AI. Automatically routes small datasets to Direct Context AI and large datasets to RAG (Retrieval-Augmented Generation) using 3072-dimensional `gemini-embedding-001` vector embeddings.
 
 ---
 
-## Implemented Features
+## Key Features
 
-### 1. Domain-Isolated Asynchronous Crawler
-- **HTTP/HTTPS Validation**: Enforces public web scheme checks preventing SSRF or unsupported protocols.
-- **Domain Scoping**: Traverses only links belonging to the seed URL's domain.
-### 1. Multi-Website Batch Crawling Engine
-- **Single & Batch Crawling Modes**: Crawl individual websites or multi-website batches concurrently.
-- **CSV & Text File Import**: Parse and validate seed URLs from multi-line text input or uploaded CSV files.
-- **Bounded Concurrency Control**: Configurable `MAX_CONCURRENT_BATCH_JOBS` via `.env` (default: 3) utilizing `asyncio.Semaphore` to manage system load.
-- **Resilient Failure Isolation**: Failed websites are isolated without crashing the batch.
-- **Selective Batch Retry**: Re-trigger background crawling specifically for failed websites without re-crawling completed sites.
-
-### 2. Autonomous Web Fetcher & Extractor
-- **Hybrid Fetch Engine**: Blazing fast async HTTP requests (`httpx`) paired with headless Chromium rendering (`playwright`) for JavaScript SPAs.
-- **Structured Content Extraction**: Extracts page titles, meta descriptions, heading hierarchy (`H1`–`H6`), paragraph text blocks, HTML data tables, unordered/ordered lists, hyperlinks, and image assets.
-- **Domain Scope Enforcement**: Enforces domain-level BFS boundaries to prevent accidental external link traversal.
-
-### 3. Relational Persistence & Exporters
-- **SQLAlchemy 2.0 Async ORM**: Non-blocking database I/O (`asyncpg` for PostgreSQL, `aiosqlite` for zero-config local dev).
-- **Multi-Format Exports**: Downloads single or multi-website datasets on-demand in **JSON**, **CSV**, **Markdown** (`.md`), **PDF** (`.pdf`), **Microsoft Word** (`.docx`), and **Microsoft Excel** (`.xlsx`).
-
-### 5. SaaS Single Page Interface (`/app`)
-- **Live Activity Console**: Auto-scrolling real-time log tracking crawl milestones.
-- **Website Preview**: Dynamic favicon, title, and description resolution via Google Favicon API.
-- **Client-Side Search & Filter**: Real-time searching and dynamic sorting (*URL*, *Title*, *Response Time*, *Links*, *Images*).
-- **Sticky Navigation**: Smooth jump scrolling across dashboard sections.
+- **Single & Batch Web Crawling**: Breadth-First Search (BFS) link traversal with depth controls and URL normalization.
+- **Comprehensive Extractor**: Automated extraction of page titles, headings (H1-H6), body paragraphs, image assets, internal/external link networks, and HTML data tables.
+- **6 Export Formats**: Stream structured datasets into **PDF**, **DOCX**, **Markdown**, **JSON**, **CSV**, and **XLSX**.
+- **AI Executive Summaries**: Produce automated structural reports and topic breakdowns for any crawl job.
+- **Conversational Grounded Q&A**: Chat naturally with your web data; answers are strictly grounded in extracted content with clickable source page citations.
+- **Intelligent Direct AI vs. RAG Routing**: Datasets under 30,000 tokens are processed via Direct AI Context; larger datasets automatically index semantic chunks into vector storage for RAG similarity retrieval.
+- **High-Dimensional Vector Embeddings**: Uses Google Gemini `gemini-embedding-001` returning 3072-dimensional vector embeddings stored in database `DocumentChunk` entities.
+- **Multi-Tenant Ownership & Isolation**: JWT authentication with user ownership boundaries across projects, crawl jobs, and vector storage.
+- **Security & Free-Tier Guardrails**: Built-in SSRF protection, private IP blocking, sliding-window IP rate limiting (`60 req/min`), and configurable memory caps (`10MB` per page, `250` pages per crawl).
+- **Responsive Dashboard UI**: Vanilla HTML5/CSS3/JavaScript SPA workspace featuring light/dark mode design, dataset search/filtering, and zero-overflow layout grids.
 
 ---
 
 ## Screenshots
 
-> *Placeholders: Replace image URLs after capturing dashboard screenshots.*
+Below are screenshots captured directly from the live platform:
 
-| Home Page & Configuration | Live Crawl Progress & Console |
-| :---: | :---: |
-| `![Home Page](./docs/screenshots/home.png)` | `![Crawl Progress](./docs/screenshots/progress.png)` |
+### 1. Product Dashboard & Landing
+![Product Dashboard](docs/screenshots/01-dashboard.png)
 
-| Extracted Results & Accordions | Data Export Section |
-| :---: | :---: |
-| `![Results View](./docs/screenshots/results.png)` | `![Export Section](./docs/screenshots/export.png)` |
+### 2. Single Crawl Workspace
+![Single Crawl Workspace](docs/screenshots/02-single-crawl.png)
 
----
+### 3. Website Analysis Overview
+![Website Analysis Overview](docs/screenshots/03-website-analysis.png)
 
-## System Architecture
+### 4. Website Structure & Pages Directory
+![Website Structure and Pages Directory](docs/screenshots/04-pages-structure.png)
 
-The application is structured into four Clean Architecture layers:
+### 5. Multi-Format Downloads & Exports
+![Downloads and Export Formats](docs/screenshots/05-exports-downloads.png)
 
-```mermaid
-flowchart TB
-    subgraph ClientLayer["Presentation Layer"]
-        UI["Vanilla JS Single Page App (/app)"]
-        Swagger["Swagger UI (/docs)"]
-    end
+### 6. AI Intelligence Workspace
+![AI Intelligence Workspace](docs/screenshots/06-ai-workspace.png)
 
-    subgraph APILayer["REST API Layer (FastAPI)"]
-        Router["APIRouter (/api/v1/crawl)"]
-        DepInject["Dependency Injection"]
-    end
+### 7. Grounded Conversational AI & RAG
+![Grounded Conversational AI and RAG](docs/screenshots/07-ai-chat-rag.png)
 
-    subgraph ServiceLayer["Application Service Layer"]
-        CrawlService["CrawlService (Task Dispatcher)"]
-        ExportService["ExportService (JSON / CSV / MD)"]
-    end
-
-    subgraph EngineLayer["Crawler Domain Layer"]
-        CrawlEngine["CrawlEngine (Async BFS)"]
-        FetcherFactory["Fetcher Strategy"]
-        HTTPFetcher["Static HTTPX Fetcher"]
-        BrowserFetcher["Dynamic Playwright Fetcher"]
-        Extractor["HTMLExtractor (BS4 + LXML)"]
-    end
-
-    subgraph DBLayer["Data Access Layer"]
-        CrawlRepo["CrawlRepository DAO"]
-        PageRepo["PageRepository DAO"]
-        Postgres[(PostgreSQL / SQLite)]
-    end
-
-    ClientLayer --> Router
-    Router --> DepInject --> CrawlService & ExportService
-    CrawlService --> CrawlEngine
-    CrawlEngine --> FetcherFactory
-    FetcherFactory --> HTTPFetcher & BrowserFetcher
-    HTTPFetcher & BrowserFetcher --> Extractor
-    Extractor --> PageRepo
-    CrawlEngine --> CrawlRepo
-    CrawlRepo & PageRepo --> Postgres
-    ExportService --> PageRepo
-```
-
-### End-to-End Crawl Flow Sequence
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User
-    participant SPA as Single Page App (app.js)
-    participant API as FastAPI Router
-    participant Service as CrawlService
-    participant Engine as CrawlEngine
-    participant DB as PostgreSQL / SQLite DB
-
-    User->>SPA: Enters Target URL & Clicks "Start Crawling"
-    SPA->>API: POST /api/v1/crawl {url, max_depth, max_pages, render_js}
-    API->>Service: initiate_crawl(payload, background_tasks)
-    Service->>DB: Save CrawlJob (Status: PENDING)
-    Service->>SPA: HTTP 202 Accepted {job_id}
-    
-    par Async Background Task
-        Service->>Engine: execute(job_id)
-        Engine->>DB: Update CrawlJob (Status: RUNNING)
-        loop BFS Queue Traversal
-            Engine->>Engine: Fetch Page (HTTPX or Playwright)
-            Engine->>Engine: Parse Features (HTMLExtractor)
-            Engine->>DB: Save ExtractedPage, Links, Images
-            Engine->>Engine: Enqueue Discovered Internal Links
-        end
-        Engine->>DB: Save CrawlStatistic & Mark Status: COMPLETED
-    and Status Polling
-        loop Poll Status Every 1.5s
-            SPA->>API: GET /api/v1/crawl/{job_id}
-            API-->>SPA: HTTP 200 OK {status: "RUNNING" | "COMPLETED"}
-        end
-    end
-
-    SPA->>API: GET /api/v1/crawl/{job_id}/results
-    API-->>SPA: HTTP 200 OK {data: [ExtractedPages]}
-    SPA->>User: Renders Accordion Cards & Export Bar
-```
+### 8. User Authentication & Workspaces
+![User Authentication and Workspaces](docs/screenshots/08-authentication.png)
 
 ---
 
-## Directory Structure
+## Architecture
+
+The platform follows a layered, decoupled architecture ensuring clean separation of concerns, asynchronous processing, and dual-database compatibility.
 
 ```
-e:/web-scraper/
-├── .env                        # Local Environment Variables
-├── .env.example                # Template Environment File
-├── .gitignore                  # Git Exclusion Definitions
-├── pyproject.toml              # Project Build Metadata & Dependencies
-├── README.md                   # Project Documentation
-├── static/                     # Frontend Static Single Page Application
-│   ├── index.html              # SPA HTML Layout
-│   ├── styles.css              # Custom SaaS CSS System
-│   └── app.js                  # Asynchronous Vanilla JS Controller
-├── src/                        # Backend Application Source Code
-│   ├── main.py                 # FastAPI Factory & Exception Handler
-│   ├── api/                    # API Controllers & Dependencies
-│   │   ├── dependencies.py     # FastAPI Service Injectors
-│   │   └── v1/
-│   │       ├── router.py       # V1 Router Aggregator
-│   │       └── endpoints/
-│   │           └── crawl.py    # REST Routes (/api/v1/crawl)
-│   ├── application/            # Business Logic Services
-│   │   └── services/
-│   │       ├── crawl_service.py# Job Orchestration
-│   │       └── export_service.py# Multi-Format Exporters
-│   ├── core/                   # Configuration & Logging
-│   │   ├── config.py           # Pydantic BaseSettings
-│   │   ├── exceptions.py       # Custom Domain Exceptions
-│   │   └── logging.py          # Structured Logger Setup
-│   ├── crawler/                # Crawler Engine & Parsers
-│   │   ├── engine.py           # Async BFS Traversal Loop
-│   │   ├── fetchers/           # Strategy Pattern Fetchers
-│   │   └── extractors/         # BS4 HTML Parser
-│   ├── db/                     # Data Access & ORM Models
-│   │   ├── base.py             # Declarative Base Class
-│   │   ├── session.py          # Async Engine & Session Factory
-│   │   ├── models/             # SQLAlchemy Entities
-│   │   └── repositories/       # Repository DAOs
-│   ├── schemas/                # Pydantic Request/Response Schemas
-│   └── utils/                  # URL Utilities & Normalization
-└── tests/                      # Automated Test Suite
-    ├── conftest.py             # Pytest Async Fixtures & SQLite Engine
-    ├── integration/            # API Route Tests
-    └── unit/                   # Extractor & Utility Tests
+[ Frontend SPA (HTML5/JS/CSS) ]
+              │
+              ▼
+[ FastAPI Application Server ] ◄── Middleware (RateLimit, SecurityHeaders, Auth)
+              │
+              ├──► [ Crawl Service ] ──► [ BFS Crawler Engine ] ──► HTTPX / Playwright
+              │
+              ├──► [ Export Service ] ──► [ Exporter Registry ] ──► PDF/DOCX/MD/JSON/CSV/XLSX
+              │
+              └──► [ AI Service ]
+                         │
+        ┌────────────────┴────────────────┐
+        ▼                                 ▼
+  [ Direct AI Path ]               [ RAG Vector Path ]
+  (Context < 30k tokens)           (Context > 30k tokens)
+        │                                 │
+        │                         ┌───────┴───────┐
+        │                         ▼               ▼
+        │                    [ Chunker ]  [ Gemini Embedding ] (3072-dim)
+        │                         │               │
+        │                         └───────┬───────┘
+        │                                 ▼
+        │                        [ Chunk Repository ] (Vector Search)
+        │                                 │
+        └────────────────┬────────────────┘
+                         ▼
+             [ Gemini 1.5 Flash LLM ]
+                         │
+                         ▼
+             [ Grounded Q&A + Sources ]
 ```
+
+### Database Abstraction
+- **Development**: Zero-config local database via SQLite (`USE_SQLITE=True`).
+- **Production**: Enterprise relational database via PostgreSQL (`USE_SQLITE=False` with `ASYNC_DATABASE_URI`).
 
 ---
 
-## Tech Stack
+## Technology Stack
 
-- **Language**: Python 3.11+
-- **Backend Framework**: FastAPI (ASGI)
-- **Web Scraping Engines**: BeautifulSoup4, LXML, Playwright (Headless Chromium), HTTPX
-- **Async I/O**: `asyncio`
-- **Database & ORM**: PostgreSQL, SQLite (`aiosqlite`), SQLAlchemy 2.0 (Async)
-- **Validation & Settings**: Pydantic V2, `pydantic-settings`
-- **Frontend**: HTML5, CSS3, ES6+ Vanilla JavaScript (No external frameworks)
-- **Testing**: Pytest, `pytest-asyncio`, `httpx`
-
----
-
-## Installation & Local Setup
-
-### Prerequisites
-- Python 3.11 or higher
-- Git
-
-### 1. Clone & Environment Setup
-```bash
-# Clone the repository
-git clone https://github.com/your-username/web-scraper.git
-cd web-scraper
-
-# Create and activate virtual environment
-python -m venv .venv
-# On Windows:
-.venv\Scripts\activate
-# On Linux/macOS:
-source .venv/bin/activate
-```
-
-### 2. Dependency Installation
-```bash
-# Install package dependencies
-pip install -e .[dev]
-
-# Install Playwright browser binaries
-playwright install chromium
-```
-
-### 3. Environment Variable Configuration
-Copy `.env.example` to `.env`:
-
-```bash
-# Set USE_SQLITE=true for zero-config local development without PostgreSQL
-USE_SQLITE=true
-SQLITE_DB_PATH="./web_scraper.db"
-
-# PostgreSQL Credentials (used if USE_SQLITE=false)
-POSTGRES_SERVER="localhost"
-POSTGRES_PORT=5432
-POSTGRES_USER="postgres"
-POSTGRES_PASSWORD="your_password"
-POSTGRES_DB="web_scraper_db"
-```
-
-### 4. Run the Server
-```bash
-uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-Access Points:
-- 🖥️ **Web Dashboard**: [http://localhost:8000/app](http://localhost:8000/app)
-- 📖 **Swagger UI Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+| Category | Technology | Usage |
+| :--- | :--- | :--- |
+| **Frontend** | HTML5, Vanilla CSS3, JavaScript (ES6+) | Single-Page Application (SPA), zero build tools required |
+| **Backend Framework** | FastAPI (Python 3.12) | Asynchronous REST API server & static asset mounting |
+| **Database & ORM** | SQLAlchemy 2.0 (Async), Alembic | Async ORM models, relational schema migrations |
+| **Crawler & Fetchers** | HTTPX, Playwright, BeautifulSoup4 | Asynchronous HTTP fetcher, headless JS renderer, HTML parser |
+| **AI Generation** | Google Gemini API (`gemini-1.5-flash`) | Executive summarization & grounded Q&A text generation |
+| **Vector Embeddings** | Google Gemini API (`gemini-embedding-001`) | 3072-dimensional float vector embeddings for RAG retrieval |
+| **Export Engines** | ReportLab, python-docx, openpyxl, pandas | Server-side dynamic document streaming |
+| **Testing** | pytest, pytest-asyncio, Playwright | Automated unit, integration, and browser smoke test suite |
 
 ---
 
-## Environment Variables Specification
+## AI & RAG Engine
 
-| Variable | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `PROJECT_NAME` | string | `Universal Website Data Extractor` | Application title used in OpenAPI docs. |
-| `VERSION` | string | `0.1.0` | Current software release version. |
-| `DEBUG` | boolean | `true` | Enables detailed logging and SQL statement echo. |
-| `API_V1_STR` | string | `/api/v1` | Base API route prefix. |
-| `USE_SQLITE` | boolean | `true` | When `true`, uses SQLite database (`sqlite+aiosqlite`). |
-| `SQLITE_DB_PATH` | string | `./web_scraper.db` | Relative file path for SQLite database. |
-| `POSTGRES_SERVER` | string | `localhost` | PostgreSQL host. |
-| `POSTGRES_PORT` | integer | `5432` | PostgreSQL port. |
-| `POSTGRES_USER` | string | `postgres` | PostgreSQL username. |
-| `POSTGRES_PASSWORD` | string | `postgres_password` | PostgreSQL password. |
-| `POSTGRES_DB` | string | `web_scraper_db` | PostgreSQL database name. |
-| `DEFAULT_MAX_DEPTH` | integer | `2` | Fallback crawl depth limit. |
-| `DEFAULT_MAX_PAGES` | integer | `50` | Fallback total page count limit. |
-| `DEFAULT_CRAWL_DELAY_SEC` | float | `0.5` | Delay in seconds between HTTP requests. |
-| `FETCH_TIMEOUT_SEC` | float | `15.0` | HTTP request timeout in seconds. |
+The platform integrates an intelligent RAG pipeline powered by Google Gemini:
+
+1. **Dataset Sizing & Strategy Routing**:
+   - `DIRECT_AI`: For small datasets ($< 30,000$ tokens and $\le 50$ pages), the full structured dataset context is injected directly into the LLM prompt.
+   - `RAG`: For larger datasets ($> 30,000$ tokens or $> 50$ pages), the system performs semantic chunking ($1000$ chars, $150$ char overlap) and generates vector embeddings.
+2. **Embedding Model**:
+   - Uses `gemini-embedding-001` via Google Gemini v1beta API returning **3072-dimensional float vectors**.
+3. **Vector Persistence & Idempotency**:
+   - Embeddings are persisted in the `document_chunks` database table. Subsequent questions reuse existing vector embeddings without duplicate API calls.
+4. **Similarity Search**:
+   - Computes cosine similarity between question embeddings and stored document chunks (`top_k=5`) to retrieve relevant context blocks.
+5. **Grounded Answers & Citations**:
+   - All AI answers strictly cite source URLs and heading paths, preventing hallucination.
 
 ---
 
-## REST API Reference
+## Data & Database Schemas
 
-### 1. Initiate Crawl Job
-`POST /api/v1/crawl` (HTTP 202 Accepted)
+The database schema manages users, projects, crawl jobs, extracted content, statistics, and vector chunks:
 
-#### Request Body
-```json
-{
-  "url": "https://news.ycombinator.com",
-  "max_depth": 2,
-  "max_pages": 20,
-  "render_js": false
-}
-```
-
-#### Response (HTTP 202 Accepted)
-```json
-{
-  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "seed_url": "https://news.ycombinator.com/",
-  "status": "RUNNING",
-  "max_depth": 2,
-  "max_pages": 20,
-  "render_js": false,
-  "created_at": "2026-08-05T10:00:00Z",
-  "finished_at": null
-}
-```
-
----
-
-### 2. Get Crawl Status
-`GET /api/v1/crawl/{job_id}` (HTTP 200 OK)
-
-#### Response
-```json
-{
-  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "seed_url": "https://news.ycombinator.com/",
-  "status": "COMPLETED",
-  "max_depth": 2,
-  "max_pages": 20,
-  "render_js": false,
-  "created_at": "2026-08-05T10:00:00Z",
-  "finished_at": "2026-08-05T10:00:14Z"
-}
-```
-
----
-
-### 3. Get Extracted Results
-`GET /api/v1/crawl/{job_id}/results?page=1&limit=20` (HTTP 200 OK)
-
-#### Response
-```json
-{
-  "total": 1,
-  "page": 1,
-  "limit": 20,
-  "data": [
-    {
-      "id": "f8e7d6c5-b4a3-2109-8765-43210fedcba9",
-      "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "url": "https://news.ycombinator.com/",
-      "normalized_url": "https://news.ycombinator.com/",
-      "status_code": 200,
-      "depth": 0,
-      "title": "Hacker News",
-      "meta_description": null,
-      "headings": { "h1": ["Hacker News"] },
-      "paragraphs": [],
-      "lists": [],
-      "tables": [],
-      "response_time_ms": 115.4,
-      "created_at": "2026-08-05T10:00:02Z",
-      "links_count": 45,
-      "images_count": 2
-    }
-  ]
-}
-```
-
----
-
-### 4. Get Statistics
-`GET /api/v1/crawl/{job_id}/statistics` (HTTP 200 OK)
-
-#### Response
-```json
-{
-  "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "pages_crawled": 1,
-  "failed_pages": 0,
-  "total_images": 2,
-  "total_links": 45,
-  "total_duration_sec": 14.8
-}
-```
-
----
-
-### 5. Export Dataset
-`POST /api/v1/crawl/{job_id}/export` (HTTP 200 OK)
-
-#### Request Body
-```json
-{
-  "format": "json"
-}
-```
-*Supports `"json"`, `"csv"`, or `"markdown"`.*
-
-#### Response
-Binary stream attachment with header `Content-Disposition: attachment; filename="crawl_export_{job_id}.json"`.
-
----
-
-## Database Overview
-
-### Entity Relationship Diagram
-
-```mermaid
-erDiagram
-    CRAWL_JOBS ||--o{ EXTRACTED_PAGES : contains
-    CRAWL_JOBS ||--o| CRAWL_STATISTICS : has
-    EXTRACTED_PAGES ||--o{ PAGE_LINKS : contains
-    EXTRACTED_PAGES ||--o{ PAGE_IMAGES : contains
-
-    CRAWL_JOBS {
-        uuid id PK
-        string seed_url
-        string status
-        int max_depth
-        int max_pages
-        boolean render_js
-        datetime created_at
-        datetime finished_at
-    }
-
-    EXTRACTED_PAGES {
-        uuid id PK
-        uuid job_id FK
-        string url
-        string normalized_url
-        int status_code
-        int depth
-        string title
-        string meta_description
-        json headings
-        json paragraphs
-        json lists
-        json tables
-        float response_time_ms
-        datetime created_at
-    }
-
-    PAGE_LINKS {
-        uuid id PK
-        uuid page_id FK
-        string source_url
-        string target_url
-        string anchor_text
-        boolean is_external
-        datetime created_at
-    }
-
-    PAGE_IMAGES {
-        uuid id PK
-        uuid page_id FK
-        string image_url
-        string alt_text
-        datetime created_at
-    }
-
-    CRAWL_STATISTICS {
-        uuid id PK
-        uuid job_id FK
-        int pages_crawled
-        int failed_pages
-        int total_images
-        int total_links
-        float total_duration_sec
-        datetime created_at
-    }
-```
+- `users`: User accounts and hashed authentication credentials.
+- `projects`: Workspace containers for organizing crawl jobs.
+- `crawl_jobs`: Crawl execution lifecycle, seed target URL, mode (`SINGLE` / `BATCH`), status (`PENDING`, `RUNNING`, `COMPLETED`, `FAILED`).
+- `extracted_pages`: Normalized page content, headings, paragraphs, lists, tables, and response latency metrics.
+- `page_links`: Discovered internal and external hyperlink graph.
+- `page_images`: Image URLs and extracted alt-text metadata.
+- `crawl_statistics`: Aggregated crawl timing, page counts, link totals, and error metrics.
+- `document_chunks`: Semantic text chunks, heading paths, and 3072-dimensional vector embedding arrays.
 
 ---
 
 ## Export Formats
 
-- **JSON**: Fully structured export containing nested headers, paragraphs, lists, tables, links, images, and performance latencies.
-- **CSV**: Flat tabular structure containing `URL`, `Normalized URL`, `Status Code`, `Depth`, `Title`, `Meta Description`, `Links Count`, `Images Count`, `Response Time`, and `Timestamp`.
-- **Markdown**: Formatted document containing page headings (`#`, `##`), quotes (`>`), bullet lists, and image markdown (`![alt](url)`).
+Datasets can be exported dynamically from any completed crawl workspace:
+
+- **PDF**: Styled executive summary report with statistical metrics, page directory tables, and section headings.
+- **DOCX**: Structured Microsoft Word document formatted for business reporting.
+- **Markdown**: Clean Markdown document (`.md`) formatted with headings, bullet points, and source links.
+- **JSON**: Comprehensive machine-readable JSON dataset export.
+- **CSV**: Flat tabular CSV containing page-level extracted data.
+- **XLSX**: Multi-sheet Microsoft Excel workbook containing separate sheets for *Pages*, *Links*, *Images*, and *Statistics*.
+
+*Exports are generated on demand and streamed directly in the HTTP response body without persistent disk storage.*
 
 ---
 
-## Key Design Decisions & Trade-offs
+## Security & Protection
 
-1. **FastAPI & AsyncIO**: Selected for non-blocking concurrency, allowing background HTTP fetching and DB operations without thread contention.
-2. **Strategy Pattern for Fetchers**: Decouples lightweight static fetching (`HTTPX`) from heavy browser rendering (`Playwright`), ensuring high throughput for static web pages.
-3. **Pydantic V2 Validation**: Guarantees boundary input validation before executing network I/O.
-4. **SQLAlchemy 2.0 Async ORM**: Provides type-safe database queries while supporting both PostgreSQL (`asyncpg`) and SQLite (`aiosqlite`).
-
----
-
-## Solved Engineering Challenges
-
-- **URL Canonicalization & Deduplication**: Resolved duplicate link crawling by normalizing schemes, stripping fragments (`#anchor`), sorting query parameters, and normalizing trailing slashes.
-- **Async Database Connection Scoping**: Background crawler tasks run in dedicated isolated database session contexts to prevent closed loop session errors.
+- **SSRF Protection**: Validates all input target URLs against private IP address ranges (`127.0.0.1`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `localhost`) to prevent Server-Side Request Forgery.
+- **Rate Limiting**: `RateLimitMiddleware` enforces sliding window IP rate limiting (`60 requests/minute`) on API endpoints.
+- **OWASP Security Headers**: `SecurityHeadersMiddleware` injects `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy`, and `Strict-Transport-Security`.
+- **Authorization Isolation**: API endpoints enforce project and crawl job ownership isolation per authenticated user.
+- **Server-Side API Keys**: Third-party Gemini API keys remain strictly server-side and are never exposed in responses or client code.
 
 ---
 
-## Known MVP Limitations
+## Free-Tier Resource Safeguards
 
-- **Single-Node Execution**: Background tasks run within FastAPI `BackgroundTasks` in-process rather than a distributed queue.
-- **Unauthenticated Access**: API endpoints are public for MVP testing.
-- **In-Memory URL Queue**: URL frontier queue is stored in memory per job rather than a distributed Redis queue.
+To ensure safe operation on resource-constrained deployment environments (e.g. 512MB RAM free-tier instances), the platform enforces configurable server-side bounds:
+
+| Parameter | Default Limit | Rationale |
+| :--- | :--- | :--- |
+| `MAX_SINGLE_CRAWL_PAGES` | **250 Pages** | Prevents RAM exhaustion during large link graph traversals |
+| `MAX_BATCH_WEBSITES` | **25 Websites** | Prevents queue starvation in multi-site batch requests |
+| `MAX_RESPONSE_SIZE_BYTES` | **10 MB** | Drops oversized remote payload downloads |
+| `FETCH_TIMEOUT_SEC` | **15.0 Seconds** | Cancels hanging remote HTTP connections |
+| `RATE_LIMIT_PER_MINUTE` | **60 Requests** | Protects API from automated spam |
+| `ANONYMOUS_AI_DAILY_LIMIT` | **10 Queries/Day** | Controls third-party LLM costs for guest users |
+| `AUTHENTICATED_AI_DAILY_LIMIT` | **100 Queries/Day** | Daily AI query quota for registered accounts |
 
 ---
 
-## Future Enhancements
+## Local Development Setup
 
-- Distributed task queue using **Celery** & **Redis**.
-- **JWT Authentication** and user management.
-- **Docker** & **Docker Compose** containerization.
-- **Sitemap.xml** and **Robots.txt** automated discovery.
+### Prerequisites
+- Python 3.12+ installed
+- Git
+
+### Installation Steps
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/GANDLA-ARAVIND/universal-website-data-extractor.git
+   cd universal-website-data-extractor
+   ```
+
+2. **Create and activate a virtual environment**:
+   ```bash
+   python -m venv venv
+   # On Windows:
+   venv\Scripts\activate
+   # On macOS/Linux:
+   source venv/bin/activate
+   ```
+
+3. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure Environment Variables**:
+   Copy `.env.example` to `.env` and fill in your Gemini API key:
+   ```bash
+   cp .env.example .env
+   ```
+
+5. **Initialize Database & Run Migrations**:
+   ```bash
+   alembic upgrade head
+   ```
+
+6. **Start the FastAPI Application Server**:
+   ```bash
+   uvicorn src.main:app --reload --host 127.0.0.1 --port 8000
+   ```
+
+7. **Access the Application**:
+   Open your browser and navigate to:
+   - Web Application UI: `http://127.0.0.1:8000/app`
+   - Interactive OpenAPI Docs: `http://127.0.0.1:8000/docs`
+
+---
+
+## Environment Variables Configuration
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `PROJECT_NAME` | `"Universal Website Data Extractor"` | Application title displayed in API docs |
+| `USE_SQLITE` | `true` | Set `true` for local SQLite development; `false` for PostgreSQL |
+| `SQLITE_DB_PATH` | `"./web_scraper.db"` | Local SQLite database file location |
+| `POSTGRES_SERVER` | `"localhost"` | PostgreSQL server hostname (when `USE_SQLITE=false`) |
+| `POSTGRES_PORT` | `5432` | PostgreSQL server port |
+| `POSTGRES_USER` | `"postgres"` | Database username |
+| `POSTGRES_PASSWORD` | `"postgres_password"` | Database password |
+| `POSTGRES_DB` | `"web_scraper_db"` | Database name |
+| `DEFAULT_MAX_DEPTH` | `2` | Default crawl link depth limit |
+| `DEFAULT_MAX_PAGES` | `50` | Default page extraction limit |
+| `FETCH_TIMEOUT_SEC` | `15.0` | HTTP fetch timeout in seconds |
+| `MAX_SINGLE_CRAWL_PAGES` | `250` | Upper limit cap for single crawl requests |
+| `MAX_BATCH_WEBSITES` | `25` | Upper limit cap for batch website count |
+| `MAX_RESPONSE_SIZE_BYTES` | `10485760` | Max page download size (10MB) |
+| `GEMINI_API_KEY` | `""` | Google Gemini API Key |
+| `GEMINI_MODEL` | `"gemini-flash-latest"` | Text generation model name |
+| `EMBEDDING_MODEL` | `"gemini-embedding-001"` | Vector embedding model (3072 dimensions) |
+| `ALLOW_AI_MOCK_FALLBACK` | `false` | Fallback mock responses when key is omitted |
+
+---
+
+## API Endpoints Reference
+
+The platform provides a REST API documented via Swagger OpenAPI (`/docs`):
+
+### Authentication & Users
+- `POST /api/v1/auth/register` — Register a new account
+- `POST /api/v1/auth/token` — Authenticate and receive JWT OAuth2 access token
+- `GET /api/v1/auth/me` — Retrieve current authenticated user profile
+
+### Single & Batch Crawling
+- `POST /api/v1/crawl` — Initiate a single website crawl job
+- `GET /api/v1/crawl/jobs` — List crawl jobs with pagination and filters
+- `GET /api/v1/crawl/{job_id}` — Get crawl job status and execution progress
+- `GET /api/v1/crawl/{job_id}/results` — Get extracted pages and dataset content
+- `POST /api/v1/batch` — Initiate a multi-website batch crawl
+
+### AI & RAG Intelligence
+- `POST /api/v1/ai/crawl/{job_id}/analyze` — Generate executive summary and topic breakdown
+- `POST /api/v1/ai/crawl/{job_id}/query` — Ask grounded Q&A question over dataset
+- `POST /api/v1/ai/crawl/{job_id}/prepare-rag` — Pre-index RAG vector embeddings
+
+### Multi-Format Exports
+- `POST /api/v1/crawl/{job_id}/export/{format}` — Download crawl dataset (`pdf`, `docx`, `markdown`, `json`, `csv`, `xlsx`)
+- `POST /api/v1/batch/{batch_id}/export/{format}` — Download batch dataset export
+
+---
+
+## Testing & Quality Assurance
+
+The repository includes a comprehensive automated test suite built with `pytest`:
+
+```bash
+# Run all unit and integration tests:
+pytest -v
+```
+
+### Verified Test Suite Summary
+- **Total Passing Tests**: **58 / 58 PASSED**
+- **Test Categories**:
+  - `tests/integration/test_ai_rag_flow.py`: RAG indexing, 3072-dim embeddings, vector retrieval, grounded Q&A.
+  - `tests/integration/test_crawl_api.py`: Crawl execution lifecycle, dataset pagination, and filters.
+  - `tests/integration/test_batch_api.py`: Multi-website batch processing and concurrency.
+  - `tests/unit/test_ai_foundation.py`: Gemini provider, embedding dimension consistency, mock generators.
+  - `tests/unit/test_ssrf_protection.py`: SSRF validation, private IP blocking, URL normalization.
+  - `tests/unit/test_api_validation.py`: Pydantic request schema upper bounds and validation.
+  - `tests/unit/test_security_headers.py`: OWASP HTTP headers and rate limit middleware.
+
+---
+
+## Project Directory Structure
+
+```
+universal-website-data-extractor/
+├── alembic/                      # Alembic database migration scripts
+│   └── versions/                 # DB migration files
+├── docs/                         # Documentation and screenshots
+│   └── screenshots/              # Captured application UI screenshots
+├── src/                          # Application source code
+│   ├── api/                      # FastAPI endpoints and route handlers
+│   │   └── v1/                   # REST API v1 endpoints
+│   ├── application/              # Service/use-case business logic
+│   │   └── services/             # Crawl, Batch, Export, Auth, AI services
+│   ├── core/                     # Core settings, security, logging, middleware
+│   ├── crawler/                  # BFS crawler engine, fetchers, HTML parser
+│   ├── db/                       # Database models, session, repositories
+│   └── schemas/                  # Pydantic request & response schemas
+├── static/                       # Frontend SPA static assets
+│   ├── index.html                # Single-Page Application HTML
+│   ├── app.js                    # SPA application state and API client
+│   └── styles.css                # CSS design system & layout styles
+├── tests/                        # Automated unit and integration test suite
+│   ├── integration/              # API flow and RAG integration tests
+│   └── unit/                     # Isolation unit tests
+├── .env.example                  # Environment configuration template
+├── alembic.ini                   # Alembic configuration
+├── pyproject.toml                # Python project configuration
+├── README.md                     # Project documentation
+└── requirements.txt              # Python package dependencies
+```
+
+---
+
+## Production Deployment Preparation
+
+To deploy the application to cloud platforms (e.g. Render, Railway, AWS, DigitalOcean):
+
+1. **Database Configuration**:
+   Set `USE_SQLITE=false` and configure PostgreSQL environment variables:
+   ```env
+   USE_SQLITE=false
+   POSTGRES_SERVER="your-db-host.postgres.database.azure.com"
+   POSTGRES_PORT=5432
+   POSTGRES_USER="db_admin"
+   POSTGRES_PASSWORD="secure_password"
+   POSTGRES_DB="website_intelligence_db"
+   ```
+2. **Apply Migrations**:
+   Run database migrations during deployment startup:
+   ```bash
+   alembic upgrade head
+   ```
+3. **Start Application Server**:
+   Start Uvicorn with production binding:
+   ```bash
+   uvicorn src.main:app --host 0.0.0.0 --port $PORT
+   ```
+
+---
+
+## Limitations
+
+- **Anti-Bot Protections**: Websites protected by aggressive anti-bot services (e.g. Cloudflare Turnstile, Akamai) require JavaScript rendering (`render_js=True`).
+- **Playwright Headless Memory**: Running multiple concurrent Playwright headless browser instances increases RAM consumption.
+- **Gemini Rate Limits**: Free-tier Gemini API keys have lower requests-per-minute limits. The system handles rate limits gracefully with HTTP 429 status codes.
+
+---
+
+## Future Roadmap
+
+- [ ] **Multi-Agent Research Workflows**: Autonomous multi-agent deep research capabilities across extracted web datasets.
+- [ ] **Scheduled Recrawls**: Cron-scheduled recrawling for website change detection.
+- [ ] **Native Vector Database Integration**: Support for external vector databases (pgvector, Qdrant) alongside ORM storage.
+- [ ] **Webhook Notifications**: Webhook integration for completed crawl and batch job alerts.
 
 ---
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+Licensing terms should be determined separately prior to commercial distribution.
+
+---
+
+## Author & Repository Links
+
+- **Repository**: [GANDLA-ARAVIND/universal-website-data-extractor](https://github.com/GANDLA-ARAVIND/universal-website-data-extractor)
