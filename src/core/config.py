@@ -35,13 +35,16 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "postgres_password"
     POSTGRES_DB: str = "web_scraper_db"
 
-    # Crawler Default Parameters
+    # Crawler Default Parameters & Free-Tier Bounds
     DEFAULT_MAX_DEPTH: int = 2
     DEFAULT_MAX_PAGES: int = 50
     DEFAULT_CRAWL_DELAY_SEC: float = 0.5
     FETCH_TIMEOUT_SEC: float = 15.0
     PLAYWRIGHT_HEADLESS: bool = True
     MAX_CONCURRENT_BATCH_JOBS: int = 3
+    MAX_SINGLE_CRAWL_PAGES: int = 250
+    MAX_BATCH_WEBSITES: int = 25
+    MAX_RESPONSE_SIZE_BYTES: int = 10 * 1024 * 1024  # 10 MB per page
 
     # Phase 1 Security & Hardening Settings
     ENABLE_SSRF_PROTECTION: bool = True
@@ -62,6 +65,17 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
     AUTH_COOKIE_NAME: str = "access_token"
     AUTH_COOKIE_SECURE: bool = False
+
+    # AI Phase Configuration Settings
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-flash-latest"
+    EMBEDDING_MODEL: str = "gemini-embedding-001"
+    MAX_DIRECT_CONTEXT_TOKENS: int = 30000
+    DEFAULT_CHUNK_SIZE_CHAR: int = 1000
+    DEFAULT_CHUNK_OVERLAP_CHAR: int = 150
+    ANONYMOUS_AI_DAILY_LIMIT: int = 10
+    AUTHENTICATED_AI_DAILY_LIMIT: int = 100
+    ALLOW_AI_MOCK_FALLBACK: bool = False
 
     @computed_field  # type: ignore[prop-decorator]
     @property
