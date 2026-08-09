@@ -9,6 +9,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 from src.utils.url_utils import validate_public_url
 
+from src.core.config import settings
 from src.db.models.crawl_job import CrawlStatus
 from src.schemas.crawl import CrawlJobResponse
 
@@ -19,7 +20,7 @@ class BatchCreateRequest(BaseModel):
     urls: List[str] = Field(
         ...,
         min_length=1,
-        max_length=100,
+        max_length=50,
         description="List of target website seed URLs to crawl.",
         json_schema_extra={"example": ["https://example.com", "https://python.org"]},
     )
@@ -47,8 +48,20 @@ class BatchCreateRequest(BaseModel):
     @field_validator("urls")
     @classmethod
     def validate_batch_urls(cls, urls: List[str]) -> List[str]:
-        """Validates that all seed URLs in batch request are valid public URLs."""
+        """Validates that all seed URLs in batch request are valid public URLs and within max count."""
+        limit = getattr(settings, "MAX_BATCH_WEBSITES", 25)
+        if len(urls) > limit:
+            raise ValueError(f"Batch websites count ({len(urls)}) cannot exceed free-tier limit of {limit}.")
         return [validate_public_url(u) for u in urls]
+
+    @field_validator("max_pages")
+    @classmethod
+    def validate_batch_max_pages(cls, value: int) -> int:
+        """Enforces max_pages bounds defined in settings."""
+        limit = getattr(settings, "MAX_SINGLE_CRAWL_PAGES", 250)
+        if value > limit:
+            raise ValueError(f"max_pages cannot exceed configured free-tier limit of {limit}.")
+        return value
 
 
 class BatchJobResponse(BaseModel):

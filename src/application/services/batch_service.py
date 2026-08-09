@@ -25,6 +25,7 @@ from src.schemas.batch import (
     BatchStatisticResponse,
 )
 from src.schemas.crawl import CrawlJobResponse
+from src.schemas.dataset import BatchDataset, BatchWebsiteItem, StandardCrawlDataset
 from src.utils.url_utils import normalize_url, validate_public_url
 
 logger = logging.getLogger(__name__)
@@ -288,3 +289,49 @@ class BatchService:
         if not stats:
             raise CrawlJobNotFoundException(f"BatchJob '{batch_id}' not found.")
         return BatchStatisticResponse.model_validate(stats)
+
+    async def get_batch_dataset(
+        self, batch_id: uuid.UUID, current_user: Optional[User] = None
+    ) -> BatchDataset:
+        """Constructs the unified BatchDataset for a multi-website batch job."""
+        from src.schemas.dataset import BatchDataset, BatchWebsiteItem, StandardCrawlDataset
+        from src.db.repositories.page_repository import PageRepository
+
+        batch = await self.get_batch_status(batch_id, current_user=current_user)
+
+        page_repo = PageRepository(self.batch_repo.session)
+        website_items: List[BatchWebsiteItem] = []
+        for child_job in batch.jobs:
+            child_pages = await page_repo.get_all_pages_for_job(child_job.id)
+            child_stats = await self.crawl_repo.get_statistics_by_job_id(child_job.id)
+
+            status_str = (
+                child_job.status.value
+                if hasattr(child_job.status, "value")
+                else str(child_job.status)
+            )
+            duration = child_stats.total_duration_sec if child_stats else 0.0
+
+            if child_pages or status_str == "COMPLETED":
+                site_dataset = StandardCrawlDataset.from_orm_models(
+                    pages=child_pages, job=child_job, stats=child_stats
+                )
+                errors = []
+            else:
+                site_dataset = None
+                errors = [f"Child job for '{child_job.seed_url}' failed or produced no pages."]
+
+            item = BatchWebsiteItem(
+                website_url=child_job.seed_url,
+                status=status_str,
+                duration_sec=duration,
+                dataset=site_dataset,
+                errors=errors,
+                warnings=[],
+            )
+            website_items.append(item)
+
+        stats_dict = await self.batch_repo.get_batch_statistics(batch_id)
+        return BatchDataset.from_batch_job(
+            batch_job=batch, website_items=website_items, stats_dict=stats_dict
+        )

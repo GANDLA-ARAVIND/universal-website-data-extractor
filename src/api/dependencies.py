@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import Cookie, Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.application.services.ai.ai_service import AIService
 from src.application.services.auth_service import AuthService
 from src.application.services.batch_service import BatchService
 from src.application.services.crawl_service import CrawlService
@@ -99,3 +100,11 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return current_user
+
+
+async def get_ai_service(
+    crawl_service: CrawlService = Depends(get_crawl_service),
+    batch_service: BatchService = Depends(get_batch_service),
+) -> AIService:
+    """Dependency provider for AIService instance."""
+    return AIService(crawl_service=crawl_service, batch_service=batch_service)

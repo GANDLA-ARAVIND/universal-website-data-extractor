@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator
+from src.core.config import settings
 from src.db.models.crawl_job import CrawlStatus
 from src.utils.url_utils import validate_public_url
 
@@ -29,13 +30,22 @@ class CrawlCreateRequest(BaseModel):
     max_pages: int = Field(
         default=50,
         ge=1,
-        le=1000,
+        le=500,
         description="Maximum total number of unique pages to crawl.",
     )
     render_js: bool = Field(
         default=False,
         description="Whether to use Playwright headless browser for JavaScript rendering.",
     )
+
+    @field_validator("max_pages")
+    @classmethod
+    def validate_max_pages_limit(cls, value: int) -> int:
+        """Enforces max_pages bounds defined in settings."""
+        limit = getattr(settings, "MAX_SINGLE_CRAWL_PAGES", 250)
+        if value > limit:
+            raise ValueError(f"max_pages cannot exceed configured free-tier limit of {limit}.")
+        return value
 
     @field_validator("url")
     @classmethod

@@ -18,6 +18,7 @@ from src.db.repositories.crawl_repository import CrawlRepository
 from src.db.repositories.page_repository import PageRepository
 from src.db.models.user import User
 from src.schemas.crawl import CrawlCreateRequest
+from src.schemas.dataset import StandardCrawlDataset
 
 
 class CrawlService:
@@ -157,3 +158,12 @@ class CrawlService:
                 total_duration_sec=0.0,
             )
         return stats
+
+    async def get_job_dataset(
+        self, job_id: uuid.UUID, current_user: Optional[User] = None
+    ) -> StandardCrawlDataset:
+        """Retrieves and constructs the StandardCrawlDataset for a crawl job."""
+        job = await self.get_job_status(job_id, current_user=current_user)
+        pages, _ = await self.page_repo.get_pages_by_job_id(job_id=job_id, skip=0, limit=1000)
+        stats = await self.crawl_repo.get_statistics_by_job_id(job_id)
+        return StandardCrawlDataset.from_orm_models(pages=pages, job=job, stats=stats)
