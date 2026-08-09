@@ -141,9 +141,14 @@ if os.path.exists("static"):
     app.mount("/app", StaticFiles(directory="static", html=True), name="static")
 
 
+from fastapi.responses import JSONResponse, RedirectResponse
+
 @app.get("/", summary="Health Check", tags=["Health"])
-async def root_health_check() -> dict:
-    """System Health Check endpoint."""
+async def root_health_check(request: Request):
+    """System Health Check endpoint. Redirects browser HTML requests to /app."""
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept:
+        return RedirectResponse(url="/app")
     return {
         "status": "online",
         "app": settings.PROJECT_NAME,

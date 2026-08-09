@@ -17,6 +17,14 @@ from src.schemas.dataset import (
     BatchSummary,
 )
 
+from src.schemas.ai import (
+    AISourceReference,
+    AIAnalysisResponse,
+    AIQueryRequest,
+    AIQueryResponse,
+    AIBatchAnalysisResponse,
+)
+
 __all__ = [
     "CrawlCreateRequest",
     "CrawlJobResponse",
@@ -33,4 +41,9 @@ __all__ = [
     "BatchMetadata",
     "BatchStatistics",
     "BatchSummary",
+    "AISourceReference",
+    "AIAnalysisResponse",
+    "AIQueryRequest",
+    "AIQueryResponse",
+    "AIBatchAnalysisResponse",
 ]
